@@ -1,4 +1,4 @@
-The Move
+#The Move
 "What's The Move?" – A social calendar designed to simplify group planning. Instead of endless group chat discussions, users can set availability, suggest activities, and vote on what to do.
 
 Features
