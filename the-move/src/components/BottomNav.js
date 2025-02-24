@@ -6,7 +6,7 @@ const BottomNav = () => {
   const location = useLocation();
 
   return (
-    <nav className="bottom-nav">
+    <nav className="bottom-nav"> 
       <Link to="/" className={location.pathname === '/' ? 'active' : ''}>
         🏠 Home
       </Link>
