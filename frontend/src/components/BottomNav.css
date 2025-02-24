@@ -1,0 +1,30 @@
+.bottom-nav {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  display: flex;
+  justify-content: space-around;
+  background-color: #333;
+  padding: 10px 0;
+  box-shadow: 0 -2px 5px rgba(0, 0, 0, 0.1);
+}
+
+.bottom-nav a {
+  color: white;
+  text-decoration: none;
+  font-size: 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+/* highlight active tab */
+.bottom-nav a.active {
+  color: #61dafb; 
+}
+
+/* hover color */
+.bottom-nav a:hover {
+  color: #61dafb; 
+}
