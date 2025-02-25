@@ -61,7 +61,7 @@
   /* Active/current day header */
   .calendar-day-name.active {
     font-weight: bold;
-    background-color: #e6f7ff;
+    background-color: #e7a131;
   }
   
   /* Calendar grid */
@@ -99,7 +99,7 @@
   /* Each day column */
   .calendar-day-column {
     flex: 1;
-    border-right: 1px solid #ccc;
+    border-right: 1px solid #cccccc;
     position: relative;
     background-color: #fff;
   }
@@ -119,7 +119,7 @@
     left: 0;
     right: 0;
     height: 2px;
-    background-color: red;
+    background-color: rgb(255, 119, 0);
     z-index: 2;
   }
   
