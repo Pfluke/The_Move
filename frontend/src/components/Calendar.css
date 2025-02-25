@@ -1,0 +1,125 @@
+/* Calendar container */
+.calendar-container {
+    font-family: sans-serif;
+    padding: 10px;
+    height: 100vh;
+    box-sizing: border-box;
+    background-color: #fafafa;
+  }
+  
+  /* Title */
+  .calendar-title {
+    text-align: center;
+    margin: 10px 0;
+    font-size: 24px;
+    font-weight: bold;
+  }
+  
+  /* Main calendar container */
+  .calendar-main {
+    height: calc(100% - 60px);
+    display: flex;
+    flex-direction: column;
+    border: 1px solid #ccc;
+    background-color: #fff;
+    overflow: hidden;
+  }
+  
+  /* Header row with day names */
+  .calendar-header {
+    display: flex;
+    border-bottom: 1px solid #ccc;
+  }
+  
+  /* Spacer for timeline in header */
+  .calendar-timeline-spacer {
+    width: 60px;
+    border-right: 1px solid #ccc;
+  }
+  
+  /* Container for day names */
+  .calendar-day-names {
+    flex: 1;
+    display: flex;
+  }
+  
+  /* Each day name cell */
+  .calendar-day-name {
+    flex: 1;
+    text-align: center;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-right: 1px solid #ccc;
+    background-color: #fff;
+  }
+  
+  .calendar-day-name:last-child {
+    border-right: none;
+  }
+  
+  /* Active/current day header */
+  .calendar-day-name.active {
+    font-weight: bold;
+    background-color: #e6f7ff;
+  }
+  
+  /* Calendar grid */
+  .calendar-grid {
+    flex: 1;
+    display: flex;
+    position: relative;
+  }
+  
+  /* Timeline column with hourly labels */
+  .calendar-timeline {
+    width: 60px;
+    border-right: 1px solid #ccc;
+    position: relative;
+    background-color: #f9f9f9;
+  }
+  
+  /* Each timeline label */
+  .calendar-timeline-label {
+    position: absolute;
+    transform: translateY(-50%);
+    font-size: 10px;
+    text-align: right;
+    width: 100%;
+    padding-right: 5px;
+  }
+  
+  /* Container for day columns */
+  .calendar-days {
+    flex: 1;
+    display: flex;
+    position: relative;
+  }
+  
+  /* Each day column */
+  .calendar-day-column {
+    flex: 1;
+    border-right: 1px solid #ccc;
+    position: relative;
+    background-color: #fff;
+  }
+  
+  .calendar-day-column:last-child {
+    border-right: none;
+  }
+  
+  /* Active/current day column */
+  .calendar-day-column.active {
+    background-color: #e6f7ff;
+  }
+  
+  /* Red horizontal line for current time */
+  .calendar-current-line {
+    position: absolute;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background-color: red;
+    z-index: 2;
+  }
+  

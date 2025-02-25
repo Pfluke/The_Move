@@ -1,4 +1,5 @@
 import React from 'react';
+import './Calendar.css';
 
 const Calendar = () => {
   // Days of the week
@@ -36,56 +37,17 @@ const Calendar = () => {
   const timelineOffset = 10; // in pixels
 
   return (
-    <div style={{
-      fontFamily: 'sans-serif',
-      padding: '10px',
-      height: '100vh',
-      boxSizing: 'border-box',
-      backgroundColor: '#fafafa'
-    }}>
-      <h1 style={{
-        textAlign: 'center',
-        margin: '10px 0',
-        fontSize: '24px',
-        fontWeight: 'bold'
-      }}>
-        Weekly Calendar
-      </h1>
-      <div style={{
-        height: 'calc(100% - 60px)',
-        display: 'flex',
-        flexDirection: 'column',
-        border: '1px solid #ccc',
-        backgroundColor: '#fff',
-        overflow: 'hidden'
-      }}>
+    <div className="calendar-container">
+      <h1 className="calendar-title">Weekly Calendar</h1>
+      <div className="calendar-main">
         {/* Header row: timeline spacer + day names */}
-        <div style={{
-          display: 'flex',
-          height: `${dayHeaderHeight}px`,
-          borderBottom: '1px solid #ccc'
-        }}>
-          <div style={{
-            width: '60px',
-            borderRight: '1px solid #ccc'
-          }}></div>
-          <div style={{
-            flex: 1,
-            display: 'flex'
-          }}>
+        <div className="calendar-header" style={{ height: `${dayHeaderHeight}px` }}>
+          <div className="calendar-timeline-spacer"></div>
+          <div className="calendar-day-names">
             {daysOfWeek.map((day, index) => (
               <div
                 key={day}
-                style={{
-                  flex: 1,
-                  textAlign: 'center',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  fontWeight: index === currentDayIndex ? 'bold' : 'normal',
-                  backgroundColor: index === currentDayIndex ? '#e6f7ff' : '#fff',
-                  borderRight: index < daysOfWeek.length - 1 ? '1px solid #ccc' : 'none'
-                }}
+                className={`calendar-day-name ${index === currentDayIndex ? 'active' : ''}`}
               >
                 {day}
               </div>
@@ -93,32 +55,16 @@ const Calendar = () => {
           </div>
         </div>
         {/* Main grid: timeline & day columns */}
-        <div style={{
-          flex: 1,
-          display: 'flex',
-          position: 'relative'
-        }}>
+        <div className="calendar-grid">
           {/* Timeline column with hourly labels */}
-          <div style={{
-            width: '60px',
-            borderRight: '1px solid #ccc',
-            position: 'relative',
-            backgroundColor: '#f9f9f9'
-          }}>
+          <div className="calendar-timeline">
             {hours.map((hour, index) => {
               const topPercent = (index / 24) * 100;
               return (
                 <div
                   key={hour}
-                  style={{
-                    position: 'absolute',
-                    top: `calc(${topPercent}% + ${timelineOffset}px)`,
-                    transform: 'translateY(-50%)',
-                    fontSize: '10px',
-                    textAlign: 'right',
-                    width: '100%',
-                    paddingRight: '5px'
-                  }}
+                  className="calendar-timeline-label"
+                  style={{ top: `calc(${topPercent}% + ${timelineOffset}px)` }}
                 >
                   {hour}
                 </div>
@@ -126,34 +72,20 @@ const Calendar = () => {
             })}
           </div>
           {/* Day columns */}
-          <div style={{
-            flex: 1,
-            display: 'flex',
-            position: 'relative'
-          }}>
+          <div className="calendar-days">
             {daysOfWeek.map((day, index) => (
               <div
                 key={day}
-                style={{
-                  flex: 1,
-                  borderRight: index < daysOfWeek.length - 1 ? '1px solid #ccc' : 'none',
-                  position: 'relative',
-                  backgroundColor: index === currentDayIndex ? '#e6f7ff' : '#fff'
-                }}
+                className={`calendar-day-column ${index === currentDayIndex ? 'active' : ''}`}
               >
                 {/* Placeholder for future events */}
               </div>
             ))}
             {/* Red horizontal line indicating current time */}
-            <div style={{
-              position: 'absolute',
-              top: `${redLinePositionPercent}%`,
-              left: 0,
-              right: 0,
-              height: '2px',
-              backgroundColor: 'red',
-              zIndex: 2
-            }}></div>
+            <div
+              className="calendar-current-line"
+              style={{ top: `${redLinePositionPercent}%` }}
+            ></div>
           </div>
         </div>
       </div>
@@ -162,7 +94,3 @@ const Calendar = () => {
 };
 
 export default Calendar;
-
-
-
-
