@@ -33,7 +33,7 @@ const Calendar = () => {
   const dayHeaderHeight = 40; // in pixels
 
   // Constant offset to move timeline labels downward
-  const timelineOffset = 5; // in pixels
+  const timelineOffset = 10; // in pixels
 
   return (
     <div style={{
