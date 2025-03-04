@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { Button, View, TextInput, Text, StyleSheet } from 'react-native';
+import { Button, View, TextInput,TouchableOpacity, Text, StyleSheet } from 'react-native';
 import { io } from "socket.io-client";
+
 
 const socket = io('http://localhost:3000');
 
-const Screen1 = ({ navigation }) => {
+const LoginScreen = ({ navigation }) => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [groups] = useState('');
@@ -45,7 +46,7 @@ const Screen1 = ({ navigation }) => {
     if (username && password) {
       socket.emit('login', username, password);
     } else {
-      setErrorMessage('Please enter both username and password'); // Set error message if creation fails
+      setErrorMessage('PLEASE ENTER BOTH A USERNAME AND PASSWORD'); // Set error message if creation fails
     }
   };
 
@@ -53,31 +54,51 @@ const Screen1 = ({ navigation }) => {
     if (username && password) {
       socket.emit('create', username, password);
     } else {
-      setErrorMessage('Please enter both username and password'); // Set error message if creation fails
+      setErrorMessage('PLEASE ENTER BOTH A USERNAME AND PASSWORD'); // Set error message if creation fails
     }
   };
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Login Screen</Text>
+      <View style={styles.titleTransformContainer}>
+        <Text style={styles.title}>THE  MOVE</Text>
+      </View>
+      <View style={styles.titleUnderline}></View>
+      <Text style={styles.header}>...okay, but what is it??</Text>
+      <View style={styles.loginTransformContainer}>
+        <Text style={styles.login}>LOG IN</Text>
+      </View>
+      <View style={styles.loginUnderline}></View>
       {errorMessage ? <Text style={styles.errorText}>{errorMessage}</Text> : null}
       <TextInput
         style={styles.input}
-        placeholder="Enter your username"
+        placeholder="ENTER YOUR USERNAME"
         value={username}
         onChangeText={setUsername}
       />
       <TextInput
         style={styles.input}
-        placeholder="Enter your Password"
+        placeholder="ENTER YOUR PASSWORD"
         value={password}
         onChangeText={setPassword}
         secureTextEntry={true}
       />
+      <TouchableOpacity
+        style={styles.button}
+        onPress={handleLogin}>
+        <Text style={styles.buttonText}>LOGIN</Text>
+      </TouchableOpacity>
 
-      <Button title="Login" onPress={handleLogin} />
+      <View style={styles.buttonSpacer}/>
+
+      <TouchableOpacity
+        style={styles.button}
+        onPress={handleCreate}>
+        <Text style={styles.buttonText}>CREATE ACCOUNT</Text>
+      </TouchableOpacity>
+      {/* <Button title="Login" onPress={handleLogin} />
       <View style={styles.spacer} />
-      <Button title="Create Account" onPress={handleCreate} />
+      <Button title="Create Account" onPress={handleCreate} /> */}
 
       {/* Display login success or error messages inline */}
       {loginMessage ? <Text style={styles.successText}>{loginMessage}</Text> : null}
@@ -92,20 +113,77 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 20,
   },
-  title: {
+  login: {
     fontSize: 24,
-    marginBottom: 20,
+    marginBottom: 13,
+    paddingTop: 130,
+    paddingBottom: 40,
+    fontWeight: 'bold',
+    color: 'black',
+  },
+  title: {
+    fontSize: 45,
+    fontWeight: 'bold',
+    //color: '#4B0082',
+    color: 'black',
+    textAlign: 'center',
+    width: '100%',
+    paddingBottom: 15
+  },
+  header: {
+    fontSize: 18,
+    marginLeft: 170,
+    marginTop: 10,
+  },
+  titleTransformContainer: {
+    transform: [
+      { scaleX: 0.9 },
+      { scaleY: 2.8 }
+    ],
+    alignSelf: 'center',
+  },
+  loginTransformContainer: {
+    transform: [
+      { scaleX: 1.5 },
+      { scaleY: 2.1 }
+    ],
+    alignSelf: 'center',
+  },
+  titleUnderline: {
+    height: 5,
+    width: '55%',
+    backgroundColor: 'black',
+  },
+  loginUnderline: {
+    height: 3,
+    width: '30%',
+    backgroundColor: 'black',
+    marginBottom: 15,
   },
   input: {
     width: '100%',
     padding: 10,
     marginBottom: 20,
-    borderWidth: 1,
-    borderColor: '#ccc',
+    borderWidth: 2,
+    //borderColor: '#4B0082',
+    borderColor: 'black',
     borderRadius: 5,
   },
-  spacer: {
-    marginVertical: 10,
+  button: {
+    //backgroundColor: '#4B0082',
+    backgroundColor: 'black',
+    paddingVertical: 10,
+    paddingHorizontal: 15,
+    borderRadius: 10,
+    paddingBottom: 10,
+  },
+  buttonText: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: 'white',
+  },
+  buttonSpacer: {
+    height: 10,
   },
   successText: {
     marginTop: 10,
@@ -113,10 +191,11 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
   errorText: {
-    marginTop: 10,
+    marginTop: 0,
+    marginBottom: 10,
     color: 'red',
     fontSize: 14,
   },
 });
 
-export default Screen1;
+export default LoginScreen;

@@ -4,7 +4,7 @@ import { io } from "socket.io-client";
 
 const socket = io('http://localhost:3000'); // Update IP if needed
 
-const Screen2 = ({ navigation, route }) => {
+const GroupScreen = ({ navigation, route }) => {
   const { username, userGroups: initialGroups = [] } = route.params || {}; // Get username & initial groups from route params
   const [message, setMessage] = useState('');
   const [userGroups, setUserGroups] = useState(initialGroups); // Store groups the user is part of
@@ -152,7 +152,20 @@ const Screen2 = ({ navigation, route }) => {
 
   return (
     <View style={styles.container}>
-      <Text>Welcome, {username}!</Text>
+      <View style={styles.titleTransformContainer}>
+        <Text style={styles.title}>THE  MOVE</Text>
+      </View>
+      <View style={styles.titleUnderline}></View>
+      <Text style={styles.headerLeft}>...c'mon, WTM!?</Text>
+      <Text style={styles.headerRight}>...patience, my friend.</Text>
+      {/* <Text>What's Up, {username}!</Text> */}
+      {/* Placeholder! */}
+      <View style={styles.welcomeTransformContainer}>
+        <Text style={styles.welcomeText}>
+          Hey there, <Text style={[styles.welcomeText, { fontWeight: 'bold' }]}>John Doe</Text>
+        </Text>
+      </View>
+      <View style={styles.welcomeUnderline}></View>
       {/* Wrap message in <Text> */}
       {message && <Text>{message}</Text>}
       {/* Wrap error message in <Text> */}
@@ -191,19 +204,37 @@ const Screen2 = ({ navigation, route }) => {
             </View>
           ))
         ) : (
-          <Text>You are not in any groups</Text>
+          <Text style={{ 
+            textAlign: 'center', 
+            width: '100%', 
+            color: 'red',
+            fontWeight: 'bold',
+          }}>
+            YOU ARE NOT IN ANY GROUPS
+          </Text>
         )}
       </ScrollView>
 
       <TextInput
         style={styles.input}
-        placeholder="Enter group name"
+        placeholder="ENTER GROUP NAME"
         value={groupName}
         onChangeText={setGroupName}
       />
       
-      <Button title="Join Group" onPress={joinGroup} />
-      <Button title="Create Group" onPress={createGroup} />
+      <TouchableOpacity
+        style={styles.button}
+        onPress={joinGroup}>
+        <Text style={styles.buttonText}>JOIN GROUP</Text>
+      </TouchableOpacity>
+      
+      <View style={styles.buttonSpacer}/>
+      
+      <TouchableOpacity
+        style={styles.button}
+        onPress={createGroup}>
+        <Text style={styles.buttonText}>CREATE GROUP</Text>
+      </TouchableOpacity>
     </View>
   );
 };
@@ -214,6 +245,54 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     padding: 20,
+  },
+  title: {
+    fontSize: 35,
+    fontWeight: 'bold',
+    //color: '#4B0082',
+    color: 'black',
+    textAlign: 'center',
+    width: '100%',
+    paddingBottom: 9,
+  },
+  headerLeft: {
+    fontSize: 16,
+    marginRight: 232,
+    marginTop: 5,
+  },
+  headerRight: {
+    fontSize: 16,
+    marginLeft: 193,
+    marginBottom: 70,
+  },
+  titleTransformContainer: {
+    transform: [
+      { scaleX: 0.9 },
+      { scaleY: 2.8 }
+    ],
+    alignSelf: 'center',
+  },
+  welcomeTransformContainer: {
+    transform: [
+      { scaleX: 1.5 },
+      { scaleY: 2.1 }
+    ],
+    alignSelf: 'center',
+  },
+  titleUnderline: {
+    height: 5,
+    width: '45%',
+    backgroundColor: 'black',
+  },
+  welcomeText: {
+    marginBottom: 4,
+    fontSize: 18
+  },
+  welcomeUnderline: {
+    height: 3,
+    width: '70%',
+    backgroundColor: 'black',
+    marginBottom: 10,
   },
   groupsList: {
     width: '100%',
@@ -241,8 +320,8 @@ const styles = StyleSheet.create({
     width: '80%',
     padding: 10,
     marginBottom: 20,
-    borderWidth: 1,
-    borderColor: '#ccc',
+    borderWidth: 3,
+    borderColor: 'black',
     borderRadius: 5,
   },
   errorText: {
@@ -258,11 +337,26 @@ const styles = StyleSheet.create({
     backgroundColor: '#ffcccc',
     alignItems: 'center',
   },
-  
+  button: {
+    //backgroundColor: '#4B0082',
+    backgroundColor: 'black',
+    paddingVertical: 10,
+    paddingHorizontal: 15,
+    borderRadius: 10,
+    paddingBottom: 10,
+  },
+  buttonText: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: 'white',
+  },
+  buttonSpacer: {
+    height: 10,
+  },
   deleteButtonText: {
     color: 'red',
     fontWeight: 'bold',
   },  
 });
 
-export default Screen2;
+export default GroupScreen;
