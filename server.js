@@ -1,411 +1,177 @@
 const express = require('express');
 const http = require('http');
 const socketIo = require('socket.io');
-const fs = require('fs');
-const path = require('path');
-const csv = require('csv-parser');
-const groupSlices = {}; // Initialize an empty object to store slices for each group
+const admin = require('firebase-admin');
+const serviceAccount = require('./accountKey.json'); 
 
+// Initialize Firebase Admin
+admin.initializeApp({
+  credential: admin.credential.cert(serviceAccount)
+});
+const db = admin.firestore();
 
 const app = express();
 const server = http.createServer(app);
 const io = socketIo(server, {
   cors: {
-    origin: '*', // Allow any origin (change this in production)
-    methods: ['GET', 'POST'],
+    origin: '*', // Adjust for production
+    methods: ['GET', 'POST']
   }
 });
 
-// Path to users.csv and groups.csv
-const usersCsvFile = path.join(__dirname, 'users.csv');
-const groupsCsvFile = path.join(__dirname, 'groups.csv');
-const groupsCreatorCsvFile = path.join(__dirname, 'groupsCreator.csv'); // New CSV file for group creators
-const slicesCsvFile = path.join(__dirname, 'slices.csv');
+//Users
+async function getUser(username) {
+  const doc = await db.collection('users').doc(username.toLowerCase()).get();
+  return doc.exists ? doc.data() : null;
+}
 
-const ensureSlicesFileExists = () => {
-  if (!fs.existsSync(slicesCsvFile)) {
-    console.log(`File not found, creating new file: ${slicesCsvFile}`);
-    fs.writeFileSync(slicesCsvFile, 'Group,Slice\n'); // Add headers
-  }
-};
-
-// Read slices from CSV based on group name
-const readSlicesFromCsv = (groupName) => {
-  return new Promise((resolve, reject) => {
-    ensureSlicesFileExists();
-    const slices = [];
-    fs.createReadStream(slicesCsvFile)
-      .pipe(csv({ headers: ['Group', 'Slice'] }))
-      .on('data', (row) => {
-        if (row.Group === groupName) {
-          slices.push(row.Slice.trim());
-        }
-      })
-      .on('end', () => resolve(slices))
-      .on('error', (err) => reject(err));
+async function createUser(username, password) {
+  return db.collection('users').doc(username.toLowerCase()).set({
+    username: username.toLowerCase(),
+    password: password
   });
-};
+}
 
-// Ensure the CSV files exist with proper headers
-const ensureFileExists = () => {
-  if (!fs.existsSync(usersCsvFile)) {
-    console.log(`File not found, creating new file: ${usersCsvFile}`);
-    fs.writeFileSync(usersCsvFile, 'username,password\n'); // Add headers
-  }
-
-  if (!fs.existsSync(groupsCsvFile)) {
-    console.log(`File not found, creating new file: ${groupsCsvFile}`);
-    fs.writeFileSync(groupsCsvFile, 'Group,Member\n'); // Add headers
-  }
-
-  if (!fs.existsSync(groupsCreatorCsvFile)) {
-    console.log(`File not found, creating new file: ${groupsCreatorCsvFile}`);
-    fs.writeFileSync(groupsCreatorCsvFile, 'Group,Creator\n'); // Add headers
-  }
-};
-
-// Read users from CSV file
-const readUsersFromCsv = () => {
-  return new Promise((resolve, reject) => {
-    ensureFileExists();
-    const users = {};
-    fs.createReadStream(usersCsvFile)
-      .pipe(csv({ headers: ['username', 'password'] }))
-      .on('data', (row) => {
-        if (row.username && row.password) {
-          users[row.username.trim().toLowerCase()] = row.password.trim();
-        }
-      })
-      .on('end', () => resolve(users))
-      .on('error', (err) => reject(err));
+// groups
+async function getAllGroups() {
+  const snapshot = await db.collection('groups').get();
+  const groups = {};
+  snapshot.forEach(doc => {
+    groups[doc.id] = doc.data().members;
   });
-};
+  return groups;
+}
 
-// Read groups from CSV file
-const readGroupsFromCsv = () => {
-  return new Promise((resolve, reject) => {
-    ensureFileExists();
-    const groups = {};
-    fs.createReadStream(groupsCsvFile)
-      .pipe(csv({ headers: ['Group', 'Member'] }))
-      .on('data', (row) => {
-        if (row.Group && row.Member) {
-          if (!groups[row.Group]) {
-            groups[row.Group] = [];
-          }
-          groups[row.Group].push(row.Member.trim().toLowerCase());
-        }
-      })
-      .on('end', () => resolve(groups))
-      .on('error', (err) => reject(err));
-  });
-};
-
-// Save groups to CSV
-const saveGroupsToCSV = (groups) => {
-  let csvData = 'Group,Member\n';
-  for (const group in groups) {
-    groups[group].forEach(member => {
-      csvData += `${group},${member}\n`;
-    });
+async function createGroup(groupName, user) {
+  const groupRef = db.collection('groups').doc(groupName);
+  const doc = await groupRef.get();
+  if (doc.exists) {
+    throw new Error(`Group '${groupName}' already exists.`);
   }
-
-  fs.writeFile(groupsCsvFile, csvData, (err) => {
-    if (err) console.error('Error writing to CSV:', err);
-    else console.log('Groups data saved to CSV');
+  await groupRef.set({
+    groupName: groupName,
+    members: [user.toLowerCase()],
+    creator: user.toLowerCase(),
+    createdAt: admin.firestore.FieldValue.serverTimestamp()
   });
-};
+}
 
-// Save group creators to CSV
-const saveGroupsCreatorToCSV = (groupName, creator) => {
-  const newGroupLine = `${groupName},${creator}\n`;
-  fs.appendFile(groupsCreatorCsvFile, newGroupLine, (err) => {
-    if (err) console.error('Error adding group creator to CSV:', err);
-    else console.log(`Group creator information saved: ${groupName}, ${creator}`);
+async function joinGroup(groupName, user) {
+  const groupRef = db.collection('groups').doc(groupName);
+  const doc = await groupRef.get();
+  if (!doc.exists) {
+    throw new Error(`Group '${groupName}' does not exist.`);
+  }
+  await groupRef.update({
+    members: admin.firestore.FieldValue.arrayUnion(user.toLowerCase())
   });
-};
+}
 
-// Write a new user to the CSV file
-const createUserInCsv = (username, password) => {
-  return new Promise((resolve, reject) => {
-    const newUserLine = `${username},${password}\n`;
-    fs.appendFile(usersCsvFile, newUserLine, (err) => {
-      if (err) {
-        console.error('Error adding new user to CSV:', err);
-        reject(err);
-      } else {
-        console.log(`User ${username} created successfully`);
-        resolve();
-      }
-    });
+async function leaveGroup(groupName, user) {
+  const groupRef = db.collection('groups').doc(groupName);
+  const doc = await groupRef.get();
+  if (!doc.exists) return;
+  await groupRef.update({
+    members: admin.firestore.FieldValue.arrayRemove(user.toLowerCase())
   });
-};
-
-// Get the creator of the group by group name
-const getGroupCreator = async (groupName) => {
-  try {
-    const creators = await readGroupCreatorsFromCsv();
-    const creator = creators[groupName];
-
-    if (creator) {
-      console.log(creator)
-      return creator;
-    } else {
-      console.log(`Group '${groupName}' creator not found.`);
-      return null; // or some default value
-    }
-  } catch (err) {
-    console.error('Error reading group creator from CSV:', err);
-    return null;
+  //delete the group if no members remain
+  const updatedDoc = await groupRef.get();
+  if (updatedDoc.data().members.length === 0) {
+    await groupRef.delete();
   }
-};
+}
 
-// Read group creators from CSV file
-const readGroupCreatorsFromCsv = () => {
-  return new Promise((resolve, reject) => {
-    ensureFileExists();
-    const creators = {};
-    fs.createReadStream(groupsCreatorCsvFile)
-      .pipe(csv({ headers: ['Group', 'Creator'] }))
-      .on('data', (row) => {
-        if (row.Group && row.Creator) {
-          creators[row.Group] = row.Creator.trim().toLowerCase();
-        }
-      })
-      .on('end', () => resolve(creators))
-      .on('error', (err) => reject(err));
+async function deleteGroup(groupName) {
+  const groupRef = db.collection('groups').doc(groupName);
+  const doc = await groupRef.get();
+  if (!doc.exists) {
+    throw new Error(`Group '${groupName}' does not exist.`);
+  }
+  await groupRef.delete();
+}
+
+async function getGroupCreator(groupName) {
+  const groupRef = db.collection('groups').doc(groupName);
+  const doc = await groupRef.get();
+  return doc.exists ? doc.data().creator : null;
+}
+
+// slices (events placeholder I think)
+async function getSlices(groupName) {
+  const slicesSnapshot = await db.collection('groups').doc(groupName).collection('slices').get();
+  const slices = [];
+  slicesSnapshot.forEach(doc => {
+    slices.push(doc.data().name);
   });
-};
+  return slices;
+}
 
-// Function to delete a group
-const deleteGroup = async (groupName) => {
-  try {
-    let groups = await readGroupsFromCsv();
-    let creators = await readGroupCreatorsFromCsv();
-
-    if (!groups[groupName]) {
-      console.log(`Group '${groupName}' does not exist.`);
-      return { success: false, message: `Group '${groupName}' does not exist.` };
-    }
-
-    // Remove the group from the groups object
-    delete groups[groupName];
-
-    // Remove from the group creators file
-    if (creators[groupName]) {
-      delete creators[groupName];
-    }
-
-    // Remove the slices related to this group
-    await deleteSlicesByGroup(groupName);
-
-    // Save updated data back to CSV files
-    saveGroupsToCSV(groups);
-    saveGroupsCreatorToCSVFile(creators);
-
-    console.log(`Group '${groupName}' deleted successfully.`);
-    return { success: true, message: `Group '${groupName}' deleted successfully.` };
-  } catch (error) {
-    console.error('Error deleting group:', error);
-    return { success: false, message: 'An error occurred while deleting the group.' };
-  }
-};
-
-// Helper function to overwrite the group creator file after deletion
-const saveGroupsCreatorToCSVFile = (creators) => {
-  let csvData = 'Group,Creator\n';
-  for (const group in creators) {
-    csvData += `${group},${creators[group]}\n`;
-  }
-
-  fs.writeFile(groupsCreatorCsvFile, csvData, (err) => {
-    if (err) console.error('Error writing to group creators CSV:', err);
-    else console.log('Group creator data updated in CSV.');
+async function setSlices(groupName, slicesArray) {
+  const slicesRef = db.collection('groups').doc(groupName).collection('slices');
+  const snapshot = await slicesRef.get();
+  const batchDelete = db.batch();
+  snapshot.forEach(doc => {
+    batchDelete.delete(doc.ref);
   });
-};
+  await batchDelete.commit();
 
-const getAllGroups = async () => {
-  try {
-    const groups = await readGroupsFromCsv();
-    return groups;
-  } catch (error) {
-    console.error('Error retrieving all groups:', error);
-    return {};
-  }
-};
+  // Add new slices in a new batch
+  const batchAdd = db.batch();
+  slicesArray.forEach(slice => {
+    const newDoc = slicesRef.doc(); // Auto-generated ID
+    batchAdd.set(newDoc, { name: slice });
+  });
+  await batchAdd.commit();
+}
 
-const deleteSlicesByGroup = async (groupName) => {
-  try {
-    // Read the current slices from the CSV file
-    const slices = await readSlicesFromCsv(groupName);
-
-    // Filter out slices for the specified group
-    const updatedSlices = slices.filter(slice => slice.group !== groupName);
-
-    // Write the updated slices back to the CSV
-    let csvData = updatedSlices.map(slice => `${slice.group},${slice.slice}`).join('\n') + '\n';
-    await fs.promises.writeFile(slicesCsvFile, csvData);
-    console.log(`Slices for group '${groupName}' deleted successfully.`);
-  } catch (error) {
-    console.error('Error deleting slices:', error);
-  }
-};
-
-
-
-// Socket.io event handlers
+// Socket.io Event Handlers
 io.on('connection', async (socket) => {
   console.log('A user connected');
-  
-  
+
+  // when a user connects, send them the list of groups
   try {
-    const groups = await readGroupsFromCsv(); // Load groups from CSV
-    socket.emit('updateGroups', groups);  // Emit groups to the client
+    const groups = await getAllGroups();
+    socket.emit('updateGroups', groups);
   } catch (err) {
-    console.error('Error reading groups from CSV:', err);
+    console.error('Error fetching groups:', err);
   }
 
-  // Handle requestGroups event from the client
-  socket.on('requestGroups', async () => {
-    console.log('Requesting all groups');
-    const groups = await readGroupsFromCsv(); // Load groups from CSV
-
-    // Send all groups data to the client
-    if (groups) {
-      socket.emit('updateGroups', groups);
-    } else {
-      console.log('Groups data is not available.');
-      socket.emit('error', 'Could not fetch groups data');
-    }
-  });
-
-  socket.on('getGroupCreatorInfo', async (groupName) => {
-    console.log(`Fetching creator for group: ${groupName}`);
-  
-    try {
-      const creator = await getGroupCreator(groupName);
-      console.log(`fetch`)
-      if (creator) {
-        console.log(`creator: ${creator}`)
-        socket.emit('groupCreatorInfo', { groupName: groupName, creator: creator });
-
-
-      } else {
-        socket.emit('groupCreatorInfo', `No creator found for group '${groupName}'`);
-      }
-    } catch (error) {
-      console.error('Error getting group creator:', error);
-      socket.emit('groupCreatorInfo', 'An error occurred while fetching the group creator');
-    }
-  });
-
-  socket.on('requestSlices', async (groupName) => {
-    // Fetch slices for the group from your data store or any logic
-    const slices = await readSlicesFromCsv(groupName); // Some function that fetches slices
-    socket.emit('updateSlices', slices);  // Emit the slices back to the client
-  });
-  
-
-  // Event to receive slice names and group name
-  // Event to receive slice names and group name
-  socket.on('addSlices', async ({ groupName, slices }) => {
-    console.log(`Received slices for group: ${groupName}`, slices);
-  
-    if (!Array.isArray(slices) || slices.length === 0) {
-      console.error("Error: Slices is not a valid array", slices);
-      return socket.emit('error', 'Invalid or empty slices array.');
-    }
-  
-    try {
-      // Prepare CSV data (replacing existing slices)
-      let csvData = slices.map(slice => `${groupName},${slice}`).join('\n') + '\n';
-  
-      // Overwrite the CSV file with the new slices (replace instead of merge)
-      await fs.promises.writeFile(slicesCsvFile, csvData);
-      console.log('Slices replaced in CSV');
-  
-      // Emit updated slices to all clients in the group
-      socket.emit('updateSlices', slices);
-    } catch (error) {
-      console.error('Error replacing slices in CSV:', error);
-      socket.emit('error', 'An error occurred while saving slices.');
-    }
-  });
-  
-
-// Handle removing a slice
-socket.on('removeSlices', ({ groupName, slice }) => {
-  if (groupSlices[groupName]) {
-    groupSlices[groupName] = groupSlices[groupName].filter(s => s !== slice);
-    io.emit('updateSlices', groupSlices[groupName]); // Notify all clients
-  } else {
-    console.error(`Error: No slices found for group ${groupName}`);
-    socket.emit('error', `No slices found for group ${groupName}`);
-  }
-});
-
-
-
-  socket.on('deleteGroup', async (groupName) => {
-    console.log(`Request received to delete group: ${groupName}`);
-    
-    const result = await deleteGroup(groupName);
-    
-    // Broadcast deletion response
-    socket.emit('groupDeleteResponse', result.message);
-
-    // Fetch updated groups after deletion
-    const updatedGroups = await getAllGroups(); // This function should return the latest groups
-
-    // Emit updated group list to all clients
-    io.emit('updateGroups', updatedGroups);
-});
-
-
-  // Handle user login
+  // Handle login
   socket.on('login', async (username, password) => {
     try {
-      const users = await readUsersFromCsv();
-      console.log('Users in CSV:', users);
-      console.log(`Attempting login: ${username} with password: ${password}`);
-
-      if (users[username.toLowerCase()] && users[username.toLowerCase()] === password) {
-        console.log(`${username} logged in successfully`);
-        const groups = await readGroupsFromCsv();
-        const userGroups = Object.entries(groups)
-          .filter(([_, members]) => members.includes(username.toLowerCase()))
-          .map(([groupName]) => groupName);
-
+      const user = await getUser(username);
+      if (user && user.password === password) {
+        // Get groups the user is a member of
+        const groupsSnapshot = await db.collection('groups')
+          .where('members', 'array-contains', username.toLowerCase())
+          .get();
+        const userGroups = [];
+        groupsSnapshot.forEach(doc => {
+          userGroups.push(doc.id);
+        });
         socket.emit('loginSuccess', 'Login successful!', userGroups);
-        socket.emit('user', `${username}`);
-
-        // Get the groups that the user is part of
-        socket.emit('userGroups', userGroups); // Emit groups to the client
-        console.log(`${username}'s groups:`, userGroups);
+        socket.emit('user', username);
+        socket.emit('userGroups', userGroups);
+        console.log(`${username} logged in successfully`);
       } else {
-        console.log(`Login failed for ${username}`);
         socket.emit('loginFailure', 'Incorrect username or password');
+        console.log(`Login failed for ${username}`);
       }
     } catch (error) {
-      console.error('Error reading CSV file:', error);
+      console.error(error);
       socket.emit('loginFailure', 'An error occurred. Please try again later.');
     }
   });
 
-  // Handle creating a new user
+  // Handle account creation
   socket.on('create', async (username, password) => {
     try {
-      const users = await readUsersFromCsv();
-
-      // Check if user already exists
-      if (users[username.toLowerCase()]) {
+      const existingUser = await getUser(username);
+      if (existingUser) {
         socket.emit('createUserFailure', `User '${username}' already exists.`);
         console.log(`User '${username}' already exists.`);
       } else {
-        // Create the new user in the CSV
-        await createUserInCsv(username.toLowerCase(), password);
-        
-        // Notify the client that the user was created successfully
+        await createUser(username, password);
         socket.emit('createUserSuccess', `User '${username}' created successfully.`);
         console.log(`User '${username}' created.`);
       }
@@ -415,91 +181,109 @@ socket.on('removeSlices', ({ groupName, slice }) => {
     }
   });
 
-  // Handle joining a group
+  // Handle group join
   socket.on('joinGroup', async (group, user) => {
-    console.log(`${user} is attempting to join group: ${group}`);
-  
     try {
-      let groups = await readGroupsFromCsv();
-  
-      if (!groups[group]) {
-        socket.emit('groupJoinFailure', `The group '${group}' does not exist. Please choose a valid group.`);
-        console.log(`Group '${group}' does not exist.`);
-      } else {
-        if (!groups[group].includes(user)) {
-          console.log(`${user} is not a member of ${group}, adding...`);
-          groups[group].push(user);
-          
-          // Save updated groups to CSV
-          saveGroupsToCSV(groups);
-  
-          // Join the group and notify the members
-          socket.join(group);
-          io.to(group).emit('groupUpdate', `${user} has joined ${group}`);
-          io.emit('updateGroups', groups);
-          
-          console.log(`${user} successfully joined group: ${group}`);
-        } else {
-          console.log(`${user} is already a member of ${group}`);
-        }
-      }
+      await joinGroup(group, user);
+      // Notify client of update
+      const groupsSnapshot = await db.collection('groups')
+        .where('members', 'array-contains', user.toLowerCase())
+        .get();
+      const userGroups = [];
+      groupsSnapshot.forEach(doc => {
+        userGroups.push(doc.id);
+      });
+      socket.emit('groupUpdate', `${user} has joined ${group}`);
+      const allGroups = await getAllGroups();
+      io.emit('updateGroups', allGroups);
+      console.log(`${user} joined group: ${group}`);
     } catch (error) {
-      console.error('Error handling group join:', error);
+      console.error('Error joining group:', error);
+      socket.emit('groupJoinFailure', error.message);
     }
   });
-  
 
-  // Handle leaving a group
+  // Handle group leave
   socket.on('leaveGroup', async (group, user) => {
-    console.log(`${user} left group: ${group}`);
-
     try {
-      let groups = await readGroupsFromCsv();
-
-      if (groups[group]) {
-        groups[group] = groups[group].filter(member => member !== user);
-        if (groups[group].length === 0) delete groups[group]; // Remove empty group
-      }
-
-      saveGroupsToCSV(groups);
+      await leaveGroup(group, user);
       socket.leave(group);
       io.to(group).emit('groupUpdate', `${user} has left ${group}`);
-      io.emit('updateGroups', groups);
+      const allGroups = await getAllGroups();
+      io.emit('updateGroups', allGroups);
+      console.log(`${user} left group: ${group}`);
     } catch (error) {
-      console.error('Error handling group leave:', error);
+      console.error('Error leaving group:', error);
     }
   });
 
-  // Handle creating a new group
+  // Handle group creation
   socket.on('createGroup', async (groupName, user) => {
-    console.log(`${user} is creating a new group: ${groupName}`);
-
     try {
-      let groups = await readGroupsFromCsv();
+      await createGroup(groupName, user);
+      socket.join(groupName);
+      io.to(groupName).emit('groupUpdate', `${user} created and joined ${groupName}`);
+      const allGroups = await getAllGroups();
+      io.emit('updateGroups', allGroups);
+      console.log(`Group '${groupName}' created by ${user}`);
+    } catch (error) {
+      console.error('Error creating group:', error);
+      socket.emit('groupCreateFailure', error.message);
+    }
+  });
 
-      if (groups[groupName]) {
-        // Group already exists, notify the user
-        socket.emit('groupCreateFailure', `The group '${groupName}' already exists.`);
-        console.log(`Group '${groupName}' already exists.`);
+  // Handle group deletion
+  socket.on('deleteGroup', async (groupName) => {
+    try {
+      await deleteGroup(groupName);
+      socket.emit('groupDeleteResponse', `Group '${groupName}' deleted successfully.`);
+      const allGroups = await getAllGroups();
+      io.emit('updateGroups', allGroups);
+      console.log(`Group '${groupName}' deleted.`);
+    } catch (error) {
+      console.error('Error deleting group:', error);
+      socket.emit('groupDeleteResponse', 'An error occurred while deleting the group.');
+    }
+  });
+
+  // Handle fetching group creator info
+  socket.on('getGroupCreatorInfo', async (groupName) => {
+    try {
+      const creator = await getGroupCreator(groupName);
+      if (creator) {
+        socket.emit('groupCreatorInfo', { groupName, creator });
       } else {
-        // Create the group and add the user as the first member
-        groups[groupName] = [user];
-        console.log(`Group '${groupName}' created by ${user}`);
-
-        // Save the group creator to the new CSV
-        saveGroupsCreatorToCSV(groupName, user);
-
-        // Save updated groups to CSV
-        saveGroupsToCSV(groups);
-
-        // Join the group and notify the members
-        socket.join(groupName);
-        io.to(groupName).emit('groupUpdate', `${user} created and joined ${groupName}`);
-        io.emit('updateGroups', groups); // Update all clients
+        socket.emit('groupCreatorInfo', { groupName, creator: 'No creator found' });
       }
     } catch (error) {
-      console.error('Error handling group creation:', error);
-      socket.emit('groupCreateFailure', 'An error occurred while creating the group.');
+      console.error('Error fetching group creator:', error);
+      socket.emit('groupCreatorInfo', 'An error occurred while fetching the group creator');
+    }
+  });
+
+  // Handle slices (fetching)
+  socket.on('requestSlices', async (groupName) => {
+    try {
+      const slices = await getSlices(groupName);
+      socket.emit('updateSlices', slices);
+    } catch (error) {
+      console.error('Error fetching slices:', error);
+      socket.emit('error', 'Could not fetch slices.');
+    }
+  });
+
+  // Handle slices (adding/updating)
+  socket.on('addSlices', async ({ groupName, slices }) => {
+    try {
+      if (!Array.isArray(slices) || slices.length === 0) {
+        return socket.emit('error', 'Invalid or empty slices array.');
+      }
+      await setSlices(groupName, slices);
+      socket.emit('updateSlices', slices);
+      console.log(`Slices updated for group: ${groupName}`);
+    } catch (error) {
+      console.error('Error updating slices:', error);
+      socket.emit('error', 'An error occurred while saving slices.');
     }
   });
 

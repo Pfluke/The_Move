@@ -162,7 +162,7 @@ const GroupScreen = ({ navigation, route }) => {
       {/* Placeholder! */}
       <View style={styles.welcomeTransformContainer}>
         <Text style={styles.welcomeText}>
-          Hey there, <Text style={[styles.welcomeText, { fontWeight: 'bold' }]}>John Doe</Text>
+          Hey there, <Text style={[styles.welcomeText, { fontWeight: 'bold' }]}>{username}</Text>
         </Text>
       </View>
       <View style={styles.welcomeUnderline}></View>
