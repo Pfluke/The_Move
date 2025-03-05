@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, Button, TextInput, Alert, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import { View, Text, TextInput, Alert, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { io } from "socket.io-client";
 
 const socket = io('http://localhost:3000'); // Update IP if needed
@@ -13,10 +13,7 @@ const GroupScreen = ({ navigation, route }) => {
   const [creators, setCreators] = useState({}); // Store creators for each group
   const [loadingCreators, setLoadingCreators] = useState(new Set()); // Track loading state for creators
 
-  console.log(`Received groups: ${JSON.stringify(initialGroups)}`);
-
   useEffect(() => {
-
     // Fetch creators for updated groups
     userGroups.forEach(group => getGroupCreator(group));
 
@@ -25,23 +22,17 @@ const GroupScreen = ({ navigation, route }) => {
       const NewuserGroups = Object.entries(updatedGroups)
         .filter(([_, members]) => members.includes(username.toLowerCase()))
         .map(([groupName]) => groupName);
-      console.log('Updated Groups:', NewuserGroups);
-      console.log('Updated Groups after deletion:', NewuserGroups);
       setUserGroups(NewuserGroups); // Update state with latest groups
 
       // Fetch creators for updated groups
       NewuserGroups.forEach(group => getGroupCreator(group));
     });
 
-    
-
     socket.on('groupDeleteResponse', (message) => {
-      console.log(`Delete response: ${message}`);
       setMessage(message); // Display response
     });
 
     socket.on('groupUpdate', (msg) => {
-      console.log(msg);
       setMessage(msg);
     });
 
@@ -67,41 +58,29 @@ const GroupScreen = ({ navigation, route }) => {
   // Function to fetch creator of a group
   const getGroupCreator = (group) => {
     setLoadingCreators((prev) => new Set(prev).add(group)); // Start loading state
-    console.log(`Requesting creator for: ${group}`);
-  
     socket.emit('getGroupCreatorInfo', group); // Request the group creator
-  
+
     socket.on('groupCreatorInfo', (data) => {
-      console.log("Received event data:", data);
-    
-      // Ensure data is an object and has the expected keys
       if (!data || typeof data !== "object" || !data.groupName || !data.creator) {
         console.error("Invalid event data received:", data);
         return;
       }
-    
-      console.log(`Received creator for ${data.groupName}: ${data.creator}`);
-    
+
       setCreators((prevCreators) => ({
         ...prevCreators,
-        [data.groupName]: data.creator, 
+        [data.groupName]: data.creator,
       }));
-    
+
       setLoadingCreators((prev) => {
         const newLoading = new Set(prev);
         newLoading.delete(data.groupName);
         return newLoading;
       });
     });
-    
-    
   };
-  
-  
 
   const joinGroup = () => {
     if (groupName.trim()) {
-      console.log(`Joining group: ${groupName}`);
       socket.emit('joinGroup', groupName, username);
       setGroupName('');
     } else {
@@ -111,7 +90,6 @@ const GroupScreen = ({ navigation, route }) => {
 
   const createGroup = () => {
     if (groupName.trim()) {
-      console.log(`Creating group: ${groupName}`);
       socket.emit('createGroup', groupName, username);
       setGroupName('');
     } else {
@@ -120,46 +98,39 @@ const GroupScreen = ({ navigation, route }) => {
   };
 
   const leaveGroup = (group) => {
-    console.log(`Leaving group: ${group}`);
     socket.emit('leaveGroup', group, username);
     setUserGroups((prevGroups) => prevGroups.filter(g => g !== group));
   };
 
   const handleDeleteGroup = (group) => {
-    console.log(`Attempting to delete group: ${group}`); // Debugging
-    socket.emit('deleteGroup', group);
-    console.log(`Delete request sent for: ${group}`); // Debugging
-    setTimeout(() => {
-      Alert.alert(
-        "Delete Group",
-        `Are you sure you want to delete ${group}?`,
-        [
-          { text: "Cancel", style: "cancel" },
-          {
-            text: "Delete",
-            style: "destructive",
-            onPress: () => {
-              socket.emit('deleteGroup', group);
-              console.log(`Delete request sent for: ${group}`); // Debugging
-            }
-          }
-        ]
-      );
-    }, 100); // Small delay to ensure UI thread updates
+    Alert.alert(
+      "Delete Group",
+      `Are you sure you want to delete ${group}?`,
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: () => {
+            socket.emit('deleteGroup', group);
+          },
+        },
+      ]
+    );
   };
-  
-  
 
   return (
     <View style={styles.container}>
-      <View style={styles.titleTransformContainer}>
-        <Text style={styles.title}>THE  MOVE</Text>
+      {/* Title Section */}
+      <View style={styles.titleContainer}>
+        <Text style={styles.title}>THE MOVE</Text>
+        <View style={styles.titleUnderline}></View>
       </View>
       <View style={styles.titleUnderline}></View>
       <Text style={styles.headerLeft}>...c'mon, WTM!?</Text>
       <Text style={styles.headerRight}>...patience, my friend.</Text>
-      {/* <Text>What's Up, {username}!</Text> */}
-      {/* Placeholder! */}
+      <Text>What's Up, {username}!</Text>
+      {/* Placeholder!
       <View style={styles.welcomeTransformContainer}>
         <Text style={styles.welcomeText}>
           Hey there, <Text style={[styles.welcomeText, { fontWeight: 'bold' }]}>{username}</Text>
@@ -167,74 +138,74 @@ const GroupScreen = ({ navigation, route }) => {
       </View>
       <View style={styles.welcomeUnderline}></View>
       {/* Wrap message in <Text> */}
-      {message && <Text>{message}</Text>}
-      {/* Wrap error message in <Text> */}
+      {/* {message && <Text>{message}</Text>} */}
+      {/* Wrap error message in <Text> */} 
+
+      {/* Error Message */}
       {errorMessage && <Text style={styles.errorText}>{errorMessage}</Text>}
 
-      {/* Scrollable group containers */}
+      {/* Group List */}
       <ScrollView style={styles.groupsList}>
         {userGroups.length > 0 ? (
           userGroups.map((group) => (
-            <View key={group} style={styles.groupContainer}>
-              <Text>Group: {group}</Text>
+            <View key={group} style={styles.groupCard}>
+              <Text style={styles.groupName}>Group: {group}</Text>
               {loadingCreators.has(group) ? (
-                <Text>Loading creator...</Text>
+                <Text style={styles.creatorText}>Loading creator...</Text>
               ) : (
-                <Text>Creator: {creators[group] || 'No creator found'}</Text>
+                <Text style={styles.creatorText}>Creator: {creators[group] || 'No creator found'}</Text>
               )}
               <View style={styles.buttonContainer}>
-                <Button 
-                  title={`Go to ${group}`} 
-                  onPress={() => navigation.navigate('Screen3', { username, groupName: group })} 
-                />
-                <TouchableOpacity onPress={() => leaveGroup(group)}>
-                  <Text style={styles.leaveButton}>Leave Group</Text>
+                <TouchableOpacity
+                  style={styles.actionButton}
+                  onPress={() => navigation.navigate('Screen3', { username, groupName: group })}
+                >
+                  <Text style={styles.actionButtonText}>Go to {group}</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.leaveButton}
+                  onPress={() => leaveGroup(group)}
+                >
+                  <Text style={styles.leaveButtonText}>Leave Group</Text>
                 </TouchableOpacity>
               </View>
               {creators[group] === username && (
-                <TouchableOpacity 
-                style={[styles.deleteButton, { padding: 10 }]} 
-                onPress={() => handleDeleteGroup(group)}
-                activeOpacity={0.7}
-              >
-                <Text style={styles.deleteButtonText}>Delete Group</Text>
-              </TouchableOpacity>           
-              
+                <TouchableOpacity
+                  style={styles.deleteButton}
+                  onPress={() => handleDeleteGroup(group)}
+                >
+                  <Text style={styles.deleteButtonText}>Delete Group</Text>
+                </TouchableOpacity>
               )}
             </View>
           ))
         ) : (
-          <Text style={{ 
-            textAlign: 'center', 
-            width: '100%', 
-            color: 'red',
-            fontWeight: 'bold',
-          }}>
-            YOU ARE NOT IN ANY GROUPS
-          </Text>
+          <TouchableOpacity
+            style={styles.addGroupCard}
+            onPress={() => setGroupName('')} // Focus on the input field
+          >
+            <Text style={styles.addGroupText}>+ Add Group</Text>
+          </TouchableOpacity>
         )}
       </ScrollView>
 
-      <TextInput
-        style={styles.input}
-        placeholder="ENTER GROUP NAME"
-        value={groupName}
-        onChangeText={setGroupName}
-      />
-      
-      <TouchableOpacity
-        style={styles.button}
-        onPress={joinGroup}>
-        <Text style={styles.buttonText}>JOIN GROUP</Text>
-      </TouchableOpacity>
-      
-      <View style={styles.buttonSpacer}/>
-      
-      <TouchableOpacity
-        style={styles.button}
-        onPress={createGroup}>
-        <Text style={styles.buttonText}>CREATE GROUP</Text>
-      </TouchableOpacity>
+      {/* Group Input and Buttons */}
+      <View style={styles.bottomContainer}>
+        <TextInput
+          style={styles.input}
+          placeholder="ENTER GROUP NAME"
+          placeholderTextColor="#888"
+          value={groupName}
+          onChangeText={setGroupName}
+        />
+        <TouchableOpacity style={styles.button} onPress={joinGroup}>
+          <Text style={styles.buttonText}>JOIN GROUP</Text>
+        </TouchableOpacity>
+        <View style={styles.buttonSpacer} />
+        <TouchableOpacity style={styles.button} onPress={createGroup}>
+          <Text style={styles.buttonText}>CREATE GROUP</Text>
+        </TouchableOpacity>
+      </View>
     </View>
   );
 };
@@ -242,121 +213,144 @@ const GroupScreen = ({ navigation, route }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    justifyContent: 'center',
+    justifyContent: 'space-between',
     alignItems: 'center',
     padding: 20,
+    backgroundColor: '#FFFFFF',
+  },
+  titleContainer: {
+    alignItems: 'center',
+    marginTop: 30, 
   },
   title: {
-    fontSize: 35,
+    fontSize: 45,
     fontWeight: 'bold',
-    //color: '#4B0082',
-    color: 'black',
+    color: '#000000',
     textAlign: 'center',
     width: '100%',
-    paddingBottom: 9,
-  },
-  headerLeft: {
-    fontSize: 16,
-    marginRight: 232,
-    marginTop: 5,
-  },
-  headerRight: {
-    fontSize: 16,
-    marginLeft: 193,
-    marginBottom: 70,
-  },
-  titleTransformContainer: {
-    transform: [
-      { scaleX: 0.9 },
-      { scaleY: 2.8 }
-    ],
-    alignSelf: 'center',
-  },
-  welcomeTransformContainer: {
-    transform: [
-      { scaleX: 1.5 },
-      { scaleY: 2.1 }
-    ],
-    alignSelf: 'center',
+    paddingBottom: 15,
   },
   titleUnderline: {
     height: 5,
-    width: '45%',
-    backgroundColor: 'black',
-  },
-  welcomeText: {
-    marginBottom: 4,
-    fontSize: 18
-  },
-  welcomeUnderline: {
-    height: 3,
-    width: '70%',
-    backgroundColor: 'black',
-    marginBottom: 10,
+    width: '75%',
+    backgroundColor: '#000000',
   },
   groupsList: {
     width: '100%',
-    maxHeight: 300, // Limiting the max height of the list to make it scrollable
+    maxHeight: 300,
+    marginBottom: 140,
   },
-  groupContainer: {
-    marginBottom: 10,
-    padding: 10,
-    borderWidth: 1,
-    borderColor: '#ccc',
-    borderRadius: 5,
+  groupCard: {
+    marginBottom: 15,
+    padding: 15,
+    borderWidth: 2,
+    borderColor: '#000000',
+    borderRadius: 10,
+    backgroundColor: '#F5F5F5',
+  },
+  addGroupCard: {
+    marginBottom: 15,
+    padding: 20,
+    borderWidth: 2,
+    borderColor: '#000000',
+    borderStyle: 'dashed',
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  addGroupText: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#000000',
+  },
+  groupName: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#000000',
+  },
+  creatorText: {
+    fontSize: 16,
+    color: '#000000',
+    marginTop: 5,
   },
   buttonContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     marginTop: 10,
   },
-  leaveButton: {
-    color: 'red',
-    fontWeight: 'bold',
-    alignSelf: 'center',
-    marginLeft: 10,
-  },
-  input: {
-    width: '80%',
-    padding: 10,
-    marginBottom: 20,
-    borderWidth: 3,
-    borderColor: 'black',
+  actionButton: {
+    backgroundColor: '#000000',
+    paddingVertical: 10,
+    paddingHorizontal: 20,
     borderRadius: 5,
   },
-  errorText: {
-    color: 'red',
-    marginBottom: 10,
+  actionButtonText: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#FFFFFF',
+  },
+  leaveButton: {
+    backgroundColor: '#FF0000',
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    borderRadius: 5,
+  },
+  leaveButtonText: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#FFFFFF',
   },
   deleteButton: {
-    marginTop: 10,
-    padding: 10,
-    borderWidth: 2,
-    borderColor: 'red',
+    backgroundColor: '#FFCCCC',
+    paddingVertical: 10,
+    paddingHorizontal: 20,
     borderRadius: 5,
-    backgroundColor: '#ffcccc',
+    marginTop: 10,
     alignItems: 'center',
   },
-  button: {
-    //backgroundColor: '#4B0082',
-    backgroundColor: 'black',
-    paddingVertical: 10,
-    paddingHorizontal: 15,
+  deleteButtonText: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#FF0000',
+  },
+  input: {
+    width: '100%',
+    padding: 15,
+    marginBottom: 20,
+    borderWidth: 2,
+    borderColor: '#000000',
     borderRadius: 10,
-    paddingBottom: 10,
+    backgroundColor: '#FFFFFF',
+    color: '#000000',
+    fontSize: 16,
+  },
+  button: {
+    backgroundColor: '#000000',
+    paddingVertical: 15,
+    paddingHorizontal: 30,
+    borderRadius: 10,
+    width: '100%',
+    alignItems: 'center',
   },
   buttonText: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: 'white',
+    color: '#FFFFFF',
   },
   buttonSpacer: {
     height: 10,
   },
-  deleteButtonText: {
-    color: 'red',
+  errorText: {
+    color: '#FF0000',
+    fontSize: 14,
     fontWeight: 'bold',
-  },  
+    textAlign: 'center',
+    marginBottom: 10,
+  },
+  bottomContainer: {
+    width: '100%',
+    marginBottom: 20,
+  },
 });
 
 export default GroupScreen;

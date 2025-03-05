@@ -1,44 +1,47 @@
 import React, { useState, useEffect } from 'react';
-import { Button, View, TextInput,TouchableOpacity, Text, StyleSheet } from 'react-native';
+import { View, TextInput, Text, StyleSheet, TouchableOpacity, Alert } from 'react-native';
 import { io } from "socket.io-client";
-
 
 const socket = io('http://localhost:3000');
 
 const LoginScreen = ({ navigation }) => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
-  const [groups] = useState('');
-  const [errorMessage, setErrorMessage] = useState('');  // State for error notification
-  const [loginMessage, setLoginMessage] = useState('');  // State for login success message
+  const [errorMessage, setErrorMessage] = useState('');
+  const [loginMessage, setLoginMessage] = useState('');
 
-  // Listen for loginSuccess and loginFailure to handle navigation
   useEffect(() => {
-    socket.on('loginSuccess', (message, groups) => {
-      setLoginMessage(message); // Set login success message
-      navigation.navigate('GroupScreen', { username, userGroups: groups });  // Pass username to Screen2
+    // Listen for login success
+    socket.on('loginSuccess', (message, groups) => { // have to implement backend first for
+      setLoginMessage(message);
+      // Navigate to GroupScreen with username and userGroups
+      navigation.navigate('GroupScreen', { username, userGroups: groups });
     });
 
+    // Listen for login failure
     socket.on('loginFailure', (message) => {
-      setErrorMessage(message); // Set error message if login fails
+      setErrorMessage(message);
     });
 
-    socket.on('createSuccess', (message) => {
-      setLoginMessage(message); // Set account creation success message
-      navigation.navigate('Screen2', { username });  // Pass username to Screen2
+    // Listen for account creation success
+    socket.on('createSuccess', (message, groups) => {
+      setLoginMessage(message);
+      // Navigate to GroupScreen with username and userGroups
+      navigation.navigate('GroupScreen', { username, userGroups: groups });
     });
 
+    // Listen for account creation failure
     socket.on('createUserFailure', (message) => {
-      setErrorMessage(message); // Set error message if creation fails
+      setErrorMessage(message);
+      Alert.alert('Error', message);
     });
 
-
+    // Cleanup listeners on unmount
     return () => {
-      // Cleanup the listeners when the component unmounts
       socket.off('loginSuccess');
       socket.off('loginFailure');
       socket.off('createSuccess');
-      socket.off('createFailure');
+      socket.off('createUserFailure');
     };
   }, [navigation, username]);
 
@@ -46,62 +49,71 @@ const LoginScreen = ({ navigation }) => {
     if (username && password) {
       socket.emit('login', username, password);
     } else {
-      setErrorMessage('PLEASE ENTER BOTH A USERNAME AND PASSWORD'); // Set error message if creation fails
+      setErrorMessage('PLEASE ENTER BOTH A USERNAME AND PASSWORD');
     }
   };
 
   const handleCreate = () => {
     if (username && password) {
+      // Emit the 'create' event to the backend
       socket.emit('create', username, password);
     } else {
-      setErrorMessage('PLEASE ENTER BOTH A USERNAME AND PASSWORD'); // Set error message if creation fails
+      setErrorMessage('PLEASE ENTER BOTH A USERNAME AND PASSWORD');
     }
   };
 
   return (
     <View style={styles.container}>
-      <View style={styles.titleTransformContainer}>
-        <Text style={styles.title}>THE  MOVE</Text>
+      {/* Title Section */}
+      <View style={styles.titleContainer}>
+        <Text style={styles.title}>THE MOVE</Text>
+        <View style={styles.titleUnderline}></View>
+        <Text style={styles.header}>...okay, but what is it??</Text>
       </View>
-      <View style={styles.titleUnderline}></View>
-      <Text style={styles.header}>...okay, but what is it??</Text>
-      <View style={styles.loginTransformContainer}>
+
+      {/* Login Section */}
+      <View style={styles.loginContainer}>
         <Text style={styles.login}>LOG IN</Text>
+        <View style={styles.loginUnderline}></View>
+        {errorMessage ? <Text style={styles.errorText}>{errorMessage}</Text> : null}
+        <TextInput
+          style={styles.input}
+          placeholder="username"
+          placeholderTextColor="#888"
+          value={username}
+          onChangeText={setUsername}
+        />
+        <TextInput
+          style={styles.input}
+          placeholder="password"
+          placeholderTextColor="#888"
+          value={password}
+          onChangeText={setPassword}
+          secureTextEntry={true}
+        />
+
+        {/* Create Account Button */}
+        <TouchableOpacity
+          style={styles.button}
+          onPress={handleCreate}
+          activeOpacity={0.7}
+        >
+          <Text style={styles.buttonText}>CREATE ACCOUNT</Text>
+        </TouchableOpacity>
+
+        <View style={styles.buttonSpacer} />
+
+        {/* Login Button */}
+        <TouchableOpacity
+          style={styles.button}
+          onPress={handleLogin}
+          activeOpacity={0.7}
+        >
+          <Text style={styles.buttonText}>LOGIN</Text>
+        </TouchableOpacity>
+
+        {loginMessage ? <Text style={styles.successText}>{loginMessage}</Text> : null}
       </View>
-      <View style={styles.loginUnderline}></View>
-      {errorMessage ? <Text style={styles.errorText}>{errorMessage}</Text> : null}
-      <TextInput
-        style={styles.input}
-        placeholder="ENTER YOUR USERNAME"
-        value={username}
-        onChangeText={setUsername}
-      />
-      <TextInput
-        style={styles.input}
-        placeholder="ENTER YOUR PASSWORD"
-        value={password}
-        onChangeText={setPassword}
-        secureTextEntry={true}
-      />
-      <TouchableOpacity
-        style={styles.button}
-        onPress={handleLogin}>
-        <Text style={styles.buttonText}>LOGIN</Text>
-      </TouchableOpacity>
-
-      <View style={styles.buttonSpacer}/>
-
-      <TouchableOpacity
-        style={styles.button}
-        onPress={handleCreate}>
-        <Text style={styles.buttonText}>CREATE ACCOUNT</Text>
-      </TouchableOpacity>
-      {/* <Button title="Login" onPress={handleLogin} />
-      <View style={styles.spacer} />
-      <Button title="Create Account" onPress={handleCreate} /> */}
-
-      {/* Display login success or error messages inline */}
-      {loginMessage ? <Text style={styles.successText}>{loginMessage}</Text> : null}
     </View>
   );
 };
@@ -109,92 +121,91 @@ const LoginScreen = ({ navigation }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    justifyContent: 'center',
+    justifyContent: 'space-between',
     alignItems: 'center',
     padding: 20,
+    backgroundColor: '#FFFFFF',
   },
-  login: {
-    fontSize: 24,
-    marginBottom: 13,
-    paddingTop: 130,
-    paddingBottom: 40,
-    fontWeight: 'bold',
-    color: 'black',
+  titleContainer: {
+    alignItems: 'center',
+    marginTop: 50,
   },
   title: {
     fontSize: 45,
     fontWeight: 'bold',
-    //color: '#4B0082',
-    color: 'black',
+    color: '#000000',
     textAlign: 'center',
     width: '100%',
-    paddingBottom: 15
+    paddingBottom: 15,
   },
   header: {
     fontSize: 18,
     marginLeft: 170,
     marginTop: 10,
-  },
-  titleTransformContainer: {
-    transform: [
-      { scaleX: 0.9 },
-      { scaleY: 2.8 }
-    ],
-    alignSelf: 'center',
-  },
-  loginTransformContainer: {
-    transform: [
-      { scaleX: 1.5 },
-      { scaleY: 2.1 }
-    ],
-    alignSelf: 'center',
+    color: '#000000',
   },
   titleUnderline: {
     height: 5,
     width: '55%',
-    backgroundColor: 'black',
+    backgroundColor: '#000000',
+  },
+  loginContainer: {
+    width: '100%',
+    marginBottom: 50,
+  },
+  login: {
+    fontSize: 24,
+    marginBottom: 13,
+    paddingTop: 20,
+    paddingBottom: 20,
+    fontWeight: 'bold',
+    color: '#000000',
   },
   loginUnderline: {
     height: 3,
     width: '30%',
-    backgroundColor: 'black',
+    backgroundColor: '#000000',
     marginBottom: 15,
   },
   input: {
     width: '100%',
-    padding: 10,
+    padding: 15,
     marginBottom: 20,
     borderWidth: 2,
-    //borderColor: '#4B0082',
-    borderColor: 'black',
-    borderRadius: 5,
+    borderColor: '#000000',
+    borderRadius: 10,
+    backgroundColor: '#FFFFFF',
+    color: '#000000',
+    fontSize: 16,
   },
   button: {
-    //backgroundColor: '#4B0082',
-    backgroundColor: 'black',
-    paddingVertical: 10,
-    paddingHorizontal: 15,
+    backgroundColor: '#000000',
+    paddingVertical: 15,
+    paddingHorizontal: 30,
     borderRadius: 10,
-    paddingBottom: 10,
+    width: '100%',
+    alignItems: 'center',
   },
   buttonText: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: 'white',
+    color: '#FFFFFF',
   },
   buttonSpacer: {
     height: 10,
   },
   successText: {
     marginTop: 10,
-    color: 'green',
+    color: '#00FF00',
     fontSize: 16,
   },
   errorText: {
     marginTop: 0,
     marginBottom: 10,
-    color: 'red',
+    color: '#FF0000',
     fontSize: 14,
+    fontWeight: 'bold',
+    textAlign: 'center',
   },
 });
 
