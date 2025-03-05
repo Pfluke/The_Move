@@ -1,10 +1,10 @@
 {
   "expo": {
-    "name": "my-app",
+    "name": "The Move",
     "slug": "my-app",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/icon.png",
+    "icon": "./assets/arrowsicon.png",
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
     "splash": {
@@ -23,7 +23,7 @@
       }
     },
     "web": {
-      "favicon": "./assets/favicon.png"
+      "favicon": "./assets/arrowsicon.png"
     },
     "plugins": [
       "expo-font"
