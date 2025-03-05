@@ -16,7 +16,7 @@ const LoginScreen = ({ navigation }) => {
   useEffect(() => {
     socket.on('loginSuccess', (message, groups) => {
       setLoginMessage(message); // Set login success message
-      navigation.navigate('Screen2', { username, userGroups: groups });  // Pass username to Screen2
+      navigation.navigate('GroupScreen', { username, userGroups: groups });  // Pass username to Screen2
     });
 
     socket.on('loginFailure', (message) => {
