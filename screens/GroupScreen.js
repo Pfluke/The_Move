@@ -141,7 +141,6 @@ const GroupScreen = ({ navigation, route }) => {
       {/* <View style={styles.titleUnderline}></View> */}
       {/* <Text style={styles.headerLeft}>...c'mon, WTM!?</Text>
       <Text style={styles.headerRight}>...patience, my friend.</Text>
-<<<<<<< HEAD
       <Text>What's Up, {username}!</Text> */}
       {/* Placeholder!
       <View style={styles.welcomeTransformContainer}>
@@ -155,10 +154,6 @@ const GroupScreen = ({ navigation, route }) => {
       {/* Wrap error message in <Text> */} 
 
       {/* Error Message */}
-=======
-      <Text>What's Up, {username}!</Text>
-      
->>>>>>> 3294f516e7e7c11f5df191200a1f15add78b7263
       {errorMessage && <Text style={styles.errorText}>{errorMessage}</Text>}
       
       {/* Group List */}
