@@ -2,13 +2,14 @@ const express = require('express');
 const http = require('http');
 const socketIo = require('socket.io');
 const admin = require('firebase-admin');
-const serviceAccount = require('./accountKey.json'); 
+const serviceAccount = require('./serviceAccountKey.json'); 
 
 // Initialize Firebase Admin
 admin.initializeApp({
   credential: admin.credential.cert(serviceAccount)
 });
 const db = admin.firestore();
+
 
 const app = express();
 const server = http.createServer(app);
