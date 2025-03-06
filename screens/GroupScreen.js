@@ -166,7 +166,7 @@ const GroupScreen = ({ navigation, route }) => {
               <View style={styles.buttonContainer}>
                 <TouchableOpacity
                   style={styles.actionButton}
-                  onPress={() => navigation.navigate('Screen3', { username, groupName: group.id })}
+                  onPress={() => navigation.navigate('EventScreen', { username, groupName: group.id })}
                 >
                   <Text style={styles.actionButtonText}>Go to {group.id}</Text>
                 </TouchableOpacity>
