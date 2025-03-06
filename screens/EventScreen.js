@@ -5,7 +5,7 @@ import { app } from '../firebaseConfig';
 
 const db = getFirestore(app);
 
-const Screen3 = ({ navigation, route }) => {
+const EventScreen = ({ navigation, route }) => {
   const { username, groupName = 'default_group' } = route.params || {};
   const [slices, setSlices] = useState([]);
   const [inputText, setInputText] = useState('');
@@ -160,4 +160,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default Screen3;
+export default EventScreen;
