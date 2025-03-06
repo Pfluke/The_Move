@@ -79,7 +79,15 @@ const LoginScreen = ({ navigation }) => {
           <Text style={styles.title}>THE MOVE</Text>
         </View>
         <View style={styles.titleUnderline}/>
-        <Text style={styles.header}>...okay, but what is it??</Text>
+        <View style={styles.headerContainer}>
+          <Text style={styles.header}>...okay, but what is it??</Text>
+        </View>
+        <View style={styles.textBubbleBig}>
+          <Text style={{ fontSize: 12 }}>       </Text>
+        </View>
+        <View style={styles.textBubbleSmall}>
+          <Text style={{ fontSize: 10 }}>    </Text>
+        </View>
       </View>
       
       
@@ -160,10 +168,30 @@ const styles = StyleSheet.create({
   },
   header: {
     fontSize: 18,
-    marginLeft: 170,
-    marginTop: 15,
     color: 'white',
-    marginBottom: 40,
+  },
+  headerContainer: {
+    backgroundColor: "#007AFF",
+    marginLeft: 150,
+    marginBottom: 4,
+    marginTop: 15,
+    paddingTop: 2,
+    paddingBottom: 2,
+    paddingLeft: 8,
+    paddingRight: 8,
+    borderRadius: 20,
+  },
+  textBubbleBig: {
+    backgroundColor: "#007AFF",
+    borderRadius: 10,
+    marginLeft: 330,
+  },
+  textBubbleSmall: {
+    backgroundColor: "#007AFF",
+    borderRadius: 10,
+    marginTop: 0,
+    marginLeft: 360,
+    marginBottom: 10,
   },
   titleUnderline: {
     height: 5,
