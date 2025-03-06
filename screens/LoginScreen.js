@@ -1,8 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { View, TextInput, Text, StyleSheet, TouchableOpacity, Alert } from 'react-native';
-import { io } from "socket.io-client";
+import { getFirestore, doc, getDoc, setDoc, collection, query, where, getDocs } from 'firebase/firestore';
+import { app } from '../firebaseConfig'; // Adjust the import path as needed
 
-const socket = io('http://localhost:3000');
+const db = getFirestore(app);
 
 const LoginScreen = ({ navigation }) => {
   const [username, setUsername] = useState('');
@@ -10,55 +11,63 @@ const LoginScreen = ({ navigation }) => {
   const [errorMessage, setErrorMessage] = useState('');
   const [loginMessage, setLoginMessage] = useState('');
 
-  useEffect(() => {
-    // Listen for login success
-    socket.on('loginSuccess', (message, groups) => { // have to implement backend first for
-      setLoginMessage(message);
-      // Navigate to GroupScreen with username and userGroups
-      navigation.navigate('GroupScreen', { username, userGroups: groups });
-    });
-
-    // Listen for login failure
-    socket.on('loginFailure', (message) => {
-      setErrorMessage(message);
-    });
-
-    // Listen for account creation success
-    socket.on('createSuccess', (message, groups) => {
-      setLoginMessage(message);
-      // Navigate to GroupScreen with username and userGroups
-      navigation.navigate('GroupScreen', { username, userGroups: groups });
-    });
-
-    // Listen for account creation failure
-    socket.on('createUserFailure', (message) => {
-      setErrorMessage(message);
-      Alert.alert('Error', message);
-    });
-
-    // Cleanup listeners on unmount
-    return () => {
-      socket.off('loginSuccess');
-      socket.off('loginFailure');
-      socket.off('createSuccess');
-      socket.off('createUserFailure');
-    };
-  }, [navigation, username]);
-
-  const handleLogin = () => {
+  // Handle login using Firestore
+  const handleLogin = async () => {
     if (username && password) {
-      socket.emit('login', username, password);
+      try {
+        const userDocRef = doc(db, "users", username.toLowerCase());
+        const userDoc = await getDoc(userDocRef);
+        if (userDoc.exists()) {
+          const userData = userDoc.data();
+          if (userData.password === password) {
+            setLoginMessage("Login successful!");
+
+            // fetch groups where the user is a member
+            const groupsQuery = query(
+              collection(db, "groups"),
+              where("members", "array-contains", username.toLowerCase())
+            );
+            const groupsSnapshot = await getDocs(groupsQuery);
+            const userGroups = [];
+            groupsSnapshot.forEach((docSnap) => {
+              userGroups.push(docSnap.id);
+            });
+
+            navigation.navigate('GroupScreen', { username, userGroups });
+          } else {
+            setErrorMessage("Incorrect password");
+          }
+        } else {
+          setErrorMessage("User does not exist");
+        }
+      } catch (error) {
+        console.error("Error during login", error);
+        setErrorMessage(error.message);
+      }
     } else {
-      setErrorMessage('PLEASE ENTER BOTH A USERNAME AND PASSWORD');
+      setErrorMessage("PLEASE ENTER BOTH A USERNAME AND PASSWORD");
     }
   };
 
-  const handleCreate = () => {
+  // Handle account creation using Firestore
+  const handleCreate = async () => {
     if (username && password) {
-      // Emit the 'create' event to the backend
-      socket.emit('create', username, password);
+      try {
+        const userDocRef = doc(db, "users", username.toLowerCase());
+        const userDoc = await getDoc(userDocRef);
+        if (userDoc.exists()) {
+          setErrorMessage(`User '${username}' already exists.`);
+        } else {
+          await setDoc(userDocRef, { username: username.toLowerCase(), password });
+          setLoginMessage("Account created successfully!");
+          navigation.navigate('GroupScreen', { username, userGroups: [] });
+        }
+      } catch (error) {
+        console.error("Error creating account", error);
+        setErrorMessage(error.message);
+      }
     } else {
-      setErrorMessage('PLEASE ENTER BOTH A USERNAME AND PASSWORD');
+      setErrorMessage("PLEASE ENTER BOTH A USERNAME AND PASSWORD");
     }
   };
 
