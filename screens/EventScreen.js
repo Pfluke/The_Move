@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, TextInput, Button, Alert, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
-import { io } from 'socket.io-client';
+import { getFirestore, doc, onSnapshot, updateDoc, arrayUnion, arrayRemove, setDoc } from 'firebase/firestore';
+import { app } from '../firebaseConfig'; 
 
-const socket = io('http://localhost:3000', { transports: ['websocket'] }); // Ensure WebSocket connection
+const db = getFirestore(app);
 
 const Screen3 = ({ navigation, route }) => {
   const { username, groupName = 'default_group' } = route.params || {};
@@ -10,58 +11,62 @@ const Screen3 = ({ navigation, route }) => {
   const [inputText, setInputText] = useState('');
   const [loadingSlices, setLoadingSlices] = useState(true);
 
+  // reference to the Firestore document for the current group
+  const groupDocRef = doc(db, "groups", groupName);
+
   useEffect(() => {
-    Alert.alert('Test', 'This is a test alert');
-
-    const requestSlices = () => {
-      console.log("Requesting slices...");
-      socket.emit('requestSlices', groupName);
-    };
-
-    // Request slices immediately on mount
-    requestSlices();
-
-    // Set interval to request slices every 5 seconds
-    const interval = setInterval(requestSlices, 5000);
-
-    // Handle incoming slice updates
-    const handleUpdateSlices = (updatedSlices) => {
-      console.log("Received slices:", updatedSlices);
-      if (Array.isArray(updatedSlices)) {
-        setSlices(updatedSlices);
+    const unsubscribe = onSnapshot(groupDocRef, (docSnap) => {
+      if (docSnap.exists()) {
+        const data = docSnap.data();
+        setSlices(data.slices || []);
         setLoadingSlices(false);
+      } else {
+        setDoc(groupDocRef, { slices: [] })
+          .then(() => {
+            setSlices([]);
+            setLoadingSlices(false);
+          })
+          .catch((error) => {
+            console.error("Error creating group document:", error);
+            Alert.alert("Error", error.message);
+          });
       }
-    };
+    }, (error) => {
+      console.error("Error fetching slices: ", error);
+      Alert.alert("Error", error.message);
+    });
 
-    socket.on('updateSlices', handleUpdateSlices);
-
-    // Cleanup on unmount
-    return () => {
-      clearInterval(interval);
-      socket.off('updateSlices', handleUpdateSlices);
-    };
+    return () => unsubscribe();
   }, [groupName]);
 
-  const addSlice = () => {
+  const addSlice = async () => {
     if (inputText.trim() !== '') {
       const newSlice = inputText.trim();
       if (slices.includes(newSlice)) {
         Alert.alert('Duplicate Slice', 'This slice already exists.');
         return;
       }
-      const newSlices = [...slices, newSlice];
-      setSlices(newSlices);
-      socket.emit('addSlices', { groupName, slices: newSlices });
-      setInputText('');
+      try {
+        await updateDoc(groupDocRef, {
+          slices: arrayUnion(newSlice)
+        });
+        setInputText('');
+      } catch (error) {
+        console.error("Error adding slice:", error);
+        Alert.alert("Error", error.message);
+      }
     }
   };
 
-  const removeSlice = (index) => {
-    setSlices((prevSlices) => {
-      const newSlices = prevSlices.filter((_, i) => i !== index);
-      socket.emit('addSlices', { groupName, slices: newSlices });
-      return newSlices;
-    });
+  const removeSlice = async (sliceToRemove) => {
+    try {
+      await updateDoc(groupDocRef, {
+        slices: arrayRemove(sliceToRemove)
+      });
+    } catch (error) {
+      console.error("Error removing slice:", error);
+      Alert.alert("Error", error.message);
+    }
   };
 
   return (
@@ -90,7 +95,7 @@ const Screen3 = ({ navigation, route }) => {
               <Text style={styles.sliceText}>
                 {index + 1}. {slice}
               </Text>
-              <TouchableOpacity onPress={() => removeSlice(index)}>
+              <TouchableOpacity onPress={() => removeSlice(slice)}>
                 <Text style={styles.removeButton}>Remove</Text>
               </TouchableOpacity>
             </View>
@@ -98,7 +103,11 @@ const Screen3 = ({ navigation, route }) => {
         </ScrollView>
       )}
 
-      <Button title="Go to Screen 1" onPress={() => navigation.navigate('Screen1')} />
+      {/* When navigating back to the Group Screen, pass the username parameter */}
+      <Button
+        title="Go to Group Screen"
+        onPress={() => navigation.navigate('GroupScreen', { username })}
+      />
     </View>
   );
 };
