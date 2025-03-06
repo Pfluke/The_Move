@@ -1,87 +1,98 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, TextInput, Alert, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
-import { io } from "socket.io-client";
+// Firebase imports:
+import { initializeApp } from 'firebase/app';
+import { getFirestore, collection, query, where, onSnapshot, doc, updateDoc, arrayUnion, setDoc, arrayRemove, deleteDoc, serverTimestamp } from 'firebase/firestore';
+import { firebaseConfig, app } from '../firebaseConfig';
 
-const socket = io('http://localhost:3000'); // Update IP if needed
+// Initialize Firebase app and Firestore
+//const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
 
 const GroupScreen = ({ navigation, route }) => {
-  const { username, userGroups: initialGroups = [] } = route.params || {}; // Get username & initial groups from route params
+  const { username } = route.params || {}; // We now assume groups will be fetched from Firestore
   const [message, setMessage] = useState('');
-  const [userGroups, setUserGroups] = useState(initialGroups); // Store groups the user is part of
+  const [userGroups, setUserGroups] = useState([]); // Array of group objects from Firestore
   const [groupName, setGroupName] = useState('');
-  const [errorMessage, setErrorMessage] = useState(''); // State to store error messages
-  const [creators, setCreators] = useState({}); // Store creators for each group
-  const [loadingCreators, setLoadingCreators] = useState(new Set()); // Track loading state for creators
+  const [errorMessage, setErrorMessage] = useState('');
+  const [creators, setCreators] = useState({}); // Mapping from group ID to creator
 
+  // Fetch groups from Firestore where "members" array contains the username (in lowercase)
   useEffect(() => {
-    // Fetch creators for updated groups
-    userGroups.forEach(group => getGroupCreator(group));
-
-    // Listen for group updates (when a new group is created or joined)
-    socket.on('updateGroups', (updatedGroups) => {
-      const NewuserGroups = Object.entries(updatedGroups)
-        .filter(([_, members]) => members.includes(username.toLowerCase()))
-        .map(([groupName]) => groupName);
-      setUserGroups(NewuserGroups); // Update state with latest groups
-
-      // Fetch creators for updated groups
-      NewuserGroups.forEach(group => getGroupCreator(group));
+    if (!username) return;
+    const q = query(
+      collection(db, "groups"),
+      where("members", "array-contains", username.toLowerCase())
+    );
+    const unsubscribe = onSnapshot(q, (querySnapshot) => {
+      const groupsArray = [];
+      const creatorsObj = {};
+      querySnapshot.forEach((docSnap) => {
+        const groupData = docSnap.data();
+        groupsArray.push({ id: docSnap.id, ...groupData });
+        creatorsObj[docSnap.id] = groupData.creator;
+      });
+      setUserGroups(groupsArray);
+      setCreators(creatorsObj);
+    }, (error) => {
+      console.error("Error fetching groups: ", error);
+      setErrorMessage(error.message);
     });
-
-    socket.on('groupDeleteResponse', (message) => {
-      setMessage(message); // Display response
-    });
-
-    socket.on('groupUpdate', (msg) => {
-      setMessage(msg);
-    });
-
-    // Listen for 'groupJoinFailure' and display the error message
-    socket.on('groupJoinFailure', (error) => {
-      setErrorMessage(error); // Set the error message from the server
-    });
-
-    // Set interval to refresh group list every 5 seconds
-    const interval = setInterval(() => {
-      socket.emit('requestGroups');
-    }, 50000);
-
-    return () => {
-      socket.off('updateGroups');
-      socket.off('groupUpdate');
-      socket.off('groupJoinFailure');
-      socket.off('groupDeleteResponse'); // Clean up event listener
-      clearInterval(interval); // Clear interval when the component unmounts
-    };
+    return () => unsubscribe();
   }, [username]);
 
-  // Function to fetch creator of a group
-  const getGroupCreator = (group) => {
-    setLoadingCreators((prev) => new Set(prev).add(group)); // Start loading state
-    socket.emit('getGroupCreatorInfo', group); // Request the group creator
-
-    socket.on('groupCreatorInfo', (data) => {
-      if (!data || typeof data !== "object" || !data.groupName || !data.creator) {
-        console.error("Invalid event data received:", data);
-        return;
-      }
-
-      setCreators((prevCreators) => ({
-        ...prevCreators,
-        [data.groupName]: data.creator,
-      }));
-
-      setLoadingCreators((prev) => {
-        const newLoading = new Set(prev);
-        newLoading.delete(data.groupName);
-        return newLoading;
+  // Firestore write functions:
+  const joinGroupFirestore = async (groupId, user) => {
+    try {
+      const groupRef = doc(db, "groups", groupId);
+      await updateDoc(groupRef, {
+        members: arrayUnion(user.toLowerCase())
       });
-    });
+    } catch (error) {
+      console.error("Error joining group: ", error);
+      setErrorMessage(error.message);
+    }
+  };
+
+  const createGroupFirestore = async (groupId, user) => {
+    try {
+      const groupRef = doc(db, "groups", groupId);
+      await setDoc(groupRef, {
+        creator: user.toLowerCase(),
+        members: [user.toLowerCase()],
+        createdAt: serverTimestamp()
+      });
+    } catch (error) {
+      console.error("Error creating group: ", error);
+      setErrorMessage(error.message);
+    }
+  };
+
+  const leaveGroupFirestore = async (groupId, user) => {
+    try {
+      const groupRef = doc(db, "groups", groupId);
+      await updateDoc(groupRef, {
+        members: arrayRemove(user.toLowerCase())
+      });
+    } catch (error) {
+      console.error("Error leaving group: ", error);
+      setErrorMessage(error.message);
+    }
+  };
+
+  const deleteGroupFirestore = async (groupId) => {
+    try {
+      const groupRef = doc(db, "groups", groupId);
+      await deleteDoc(groupRef);
+    } catch (error) {
+      console.error("Error deleting group: ", error);
+      setErrorMessage(error.message);
+    }
   };
 
   const joinGroup = () => {
     if (groupName.trim()) {
-      socket.emit('joinGroup', groupName, username);
+      joinGroupFirestore(groupName, username);
       setGroupName('');
     } else {
       Alert.alert('Error', 'Please enter a valid group name');
@@ -90,29 +101,28 @@ const GroupScreen = ({ navigation, route }) => {
 
   const createGroup = () => {
     if (groupName.trim()) {
-      socket.emit('createGroup', groupName, username);
+      createGroupFirestore(groupName, username);
       setGroupName('');
     } else {
       Alert.alert('Error', 'Please enter a valid group name');
     }
   };
 
-  const leaveGroup = (group) => {
-    socket.emit('leaveGroup', group, username);
-    setUserGroups((prevGroups) => prevGroups.filter(g => g !== group));
+  const leaveGroup = (groupId) => {
+    leaveGroupFirestore(groupId, username);
   };
 
-  const handleDeleteGroup = (group) => {
+  const handleDeleteGroup = (groupId) => {
     Alert.alert(
       "Delete Group",
-      `Are you sure you want to delete ${group}?`,
+      `Are you sure you want to delete ${groupId}?`,
       [
         { text: "Cancel", style: "cancel" },
         {
           text: "Delete",
           style: "destructive",
           onPress: () => {
-            socket.emit('deleteGroup', group);
+            deleteGroupFirestore(groupId);
           },
         },
       ]
@@ -130,49 +140,34 @@ const GroupScreen = ({ navigation, route }) => {
       <Text style={styles.headerLeft}>...c'mon, WTM!?</Text>
       <Text style={styles.headerRight}>...patience, my friend.</Text>
       <Text>What's Up, {username}!</Text>
-      {/* Placeholder!
-      <View style={styles.welcomeTransformContainer}>
-        <Text style={styles.welcomeText}>
-          Hey there, <Text style={[styles.welcomeText, { fontWeight: 'bold' }]}>{username}</Text>
-        </Text>
-      </View>
-      <View style={styles.welcomeUnderline}></View>
-      {/* Wrap message in <Text> */}
-      {/* {message && <Text>{message}</Text>} */}
-      {/* Wrap error message in <Text> */} 
-
-      {/* Error Message */}
+      
       {errorMessage && <Text style={styles.errorText}>{errorMessage}</Text>}
-
+      
       {/* Group List */}
       <ScrollView style={styles.groupsList}>
         {userGroups.length > 0 ? (
           userGroups.map((group) => (
-            <View key={group} style={styles.groupCard}>
-              <Text style={styles.groupName}>Group: {group}</Text>
-              {loadingCreators.has(group) ? (
-                <Text style={styles.creatorText}>Loading creator...</Text>
-              ) : (
-                <Text style={styles.creatorText}>Creator: {creators[group] || 'No creator found'}</Text>
-              )}
+            <View key={group.id} style={styles.groupCard}>
+              <Text style={styles.groupName}>Group: {group.id}</Text>
+              <Text style={styles.creatorText}>Creator: {creators[group.id] || 'No creator found'}</Text>
               <View style={styles.buttonContainer}>
                 <TouchableOpacity
                   style={styles.actionButton}
-                  onPress={() => navigation.navigate('Screen3', { username, groupName: group })}
+                  onPress={() => navigation.navigate('Screen3', { username, groupName: group.id })}
                 >
-                  <Text style={styles.actionButtonText}>Go to {group}</Text>
+                  <Text style={styles.actionButtonText}>Go to {group.id}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={styles.leaveButton}
-                  onPress={() => leaveGroup(group)}
+                  onPress={() => leaveGroup(group.id)}
                 >
                   <Text style={styles.leaveButtonText}>Leave Group</Text>
                 </TouchableOpacity>
               </View>
-              {creators[group] === username && (
+              {creators[group.id] === username.toLowerCase() && (
                 <TouchableOpacity
                   style={styles.deleteButton}
-                  onPress={() => handleDeleteGroup(group)}
+                  onPress={() => handleDeleteGroup(group.id)}
                 >
                   <Text style={styles.deleteButtonText}>Delete Group</Text>
                 </TouchableOpacity>
@@ -182,13 +177,13 @@ const GroupScreen = ({ navigation, route }) => {
         ) : (
           <TouchableOpacity
             style={styles.addGroupCard}
-            onPress={() => setGroupName('')} // Focus on the input field
+            onPress={() => setGroupName('')}
           >
             <Text style={styles.addGroupText}>+ Add Group</Text>
           </TouchableOpacity>
         )}
       </ScrollView>
-
+      
       {/* Group Input and Buttons */}
       <View style={styles.bottomContainer}>
         <TextInput
