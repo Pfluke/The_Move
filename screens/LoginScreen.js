@@ -66,11 +66,14 @@ const LoginScreen = ({ navigation }) => {
     <View style={styles.container}>
       {/* Title Section */}
       <View style={styles.titleContainer}>
-        <Text style={styles.title}>THE MOVE</Text>
-        <View style={styles.titleUnderline}></View>
+        <View style={styles.titleTransformContainer}>
+          <Text style={styles.title}>THE MOVE</Text>
+        </View>
+        <View style={styles.titleUnderline}/>
         <Text style={styles.header}>...okay, but what is it??</Text>
       </View>
-
+      
+      
       {/* Login Section */}
       <View style={styles.loginContainer}>
         <Text style={styles.login}>LOG IN</Text>
@@ -121,43 +124,54 @@ const LoginScreen = ({ navigation }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    justifyContent: 'space-between',
+    //justifyContent: 'space-between',
     alignItems: 'center',
-    padding: 20,
     backgroundColor: '#FFFFFF',
   },
   titleContainer: {
     alignItems: 'center',
-    marginTop: 50,
+    backgroundColor: 'black',
+    flexDirection: 'column',
+    width: '100%',
+    paddingTop: 40,
+  },
+  titleTransformContainer: {
+    transform: [
+      { scaleX: 0.9 },
+      { scaleY: 2.8 }
+    ],
   },
   title: {
-    fontSize: 45,
+    fontSize: 55,
+    marginTop: 45,
     fontWeight: 'bold',
-    color: '#000000',
+    color: 'white',
     textAlign: 'center',
     width: '100%',
-    paddingBottom: 15,
   },
   header: {
     fontSize: 18,
     marginLeft: 170,
-    marginTop: 10,
-    color: '#000000',
+    marginTop: 15,
+    color: 'white',
+    marginBottom: 40,
   },
   titleUnderline: {
     height: 5,
-    width: '55%',
-    backgroundColor: '#000000',
+    width: '50%',
+    backgroundColor: 'white',
+    marginTop: 75,
   },
   loginContainer: {
     width: '100%',
     marginBottom: 50,
+    marginTop: 115,
+    padding: 20,
   },
   login: {
     fontSize: 24,
-    marginBottom: 13,
     paddingTop: 20,
-    paddingBottom: 20,
+    paddingBottom: 5,
     fontWeight: 'bold',
     color: '#000000',
   },
@@ -165,7 +179,7 @@ const styles = StyleSheet.create({
     height: 3,
     width: '30%',
     backgroundColor: '#000000',
-    marginBottom: 15,
+    marginBottom: 10,
   },
   input: {
     width: '100%',
@@ -200,7 +214,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
   errorText: {
-    marginTop: 0,
     marginBottom: 10,
     color: '#FF0000',
     fontSize: 14,

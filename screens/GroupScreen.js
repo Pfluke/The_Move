@@ -123,13 +123,15 @@ const GroupScreen = ({ navigation, route }) => {
     <View style={styles.container}>
       {/* Title Section */}
       <View style={styles.titleContainer}>
-        <Text style={styles.title}>THE MOVE</Text>
-        <View style={styles.titleUnderline}></View>
+        <View style={styles.titleTransformContainer}>
+          <Text style={styles.title}>THE MOVE</Text>
+        </View>
       </View>
-      <View style={styles.titleUnderline}></View>
-      <Text style={styles.headerLeft}>...c'mon, WTM!?</Text>
+      <View style={styles.titleUnderline}/>
+      {/* <View style={styles.titleUnderline}></View> */}
+      {/* <Text style={styles.headerLeft}>...c'mon, WTM!?</Text>
       <Text style={styles.headerRight}>...patience, my friend.</Text>
-      <Text>What's Up, {username}!</Text>
+      <Text>What's Up, {username}!</Text> */}
       {/* Placeholder!
       <View style={styles.welcomeTransformContainer}>
         <Text style={styles.welcomeText}>
@@ -220,7 +222,14 @@ const styles = StyleSheet.create({
   },
   titleContainer: {
     alignItems: 'center',
-    marginTop: 30, 
+    marginTop: 80, 
+  },
+  titleTransformContainer: {
+    transform: [
+      { scaleX: 0.9 },
+      { scaleY: 2.8 }
+    ],
+    alignSelf: 'center',
   },
   title: {
     fontSize: 45,
@@ -232,8 +241,9 @@ const styles = StyleSheet.create({
   },
   titleUnderline: {
     height: 5,
-    width: '75%',
+    width: '50%',
     backgroundColor: '#000000',
+    marginBottom: 20,
   },
   groupsList: {
     width: '100%',
