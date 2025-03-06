@@ -10,14 +10,14 @@ import { firebaseConfig, app } from '../firebaseConfig';
 const db = getFirestore(app);
 
 const GroupScreen = ({ navigation, route }) => {
-  const { username } = route.params || {}; // We now assume groups will be fetched from Firestore
+  const { username } = route.params || {}; // groups will be fetched from Firestore
   const [message, setMessage] = useState('');
   const [userGroups, setUserGroups] = useState([]); // Array of group objects from Firestore
   const [groupName, setGroupName] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
   const [creators, setCreators] = useState({}); // Mapping from group ID to creator
 
-  // Fetch groups from Firestore where "members" array contains the username (in lowercase)
+  // Fetch groups from Firestore, members are users
   useEffect(() => {
     if (!username) return;
     const q = query(
