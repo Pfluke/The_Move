@@ -7,6 +7,7 @@ import WelcomeScreen from './screens/WelcomeScreen';
 import LoginScreen from './screens/LoginScreen';
 import GroupScreen from './screens/GroupScreen';
 import Screen3 from './screens/EventScreen';
+import AddSliceScreen from './screens/AddSliceScreen';
 
 // Stack navigator setup
 const Stack = createStackNavigator();
@@ -14,7 +15,7 @@ const Stack = createStackNavigator();
 const App = () => {
   return (
     <NavigationContainer>
-      <Stack.Navigator initialRouteName="WelcomeScreen">
+      <Stack.Navigator initialRouteName="LoginScreen">
         <Stack.Screen name="WelcomeScreen" component={WelcomeScreen} options={{headerShown: false}}/>
         <Stack.Screen name="LoginScreen" component={LoginScreen}  
         options={{
@@ -27,6 +28,7 @@ const App = () => {
           headerShown: false, 
         }} />
         <Stack.Screen name="Screen3" component={Screen3} />
+        <Stack.Screen name="AddSliceScreen" component={AddSliceScreen} />
       </Stack.Navigator>
     </NavigationContainer>
   );
