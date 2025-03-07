@@ -136,8 +136,17 @@ const GroupScreen = ({ navigation, route }) => {
         <View style={styles.titleTransformContainer}>
           <Text style={styles.title}>THE MOVE</Text>
         </View>
+        <View style={styles.titleUnderline}/>
+        <View style={styles.headerContainer}>
+          <Text style={styles.header}>What are the moves later?</Text>
+        </View>
+        <View style={styles.textBubbleBig}>
+          <Text style={{ fontSize: 12 }}>       </Text>
+        </View>
+        <View style={styles.textBubbleSmall}>
+          <Text style={{ fontSize: 10 }}>    </Text>
+        </View>
       </View>
-      <View style={styles.titleUnderline}/>
       {/* <View style={styles.titleUnderline}></View> */}
       {/* <Text style={styles.headerLeft}>...c'mon, WTM!?</Text>
       <Text style={styles.headerRight}>...patience, my friend.</Text>
@@ -223,12 +232,14 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'space-between',
     alignItems: 'center',
-    padding: 20,
+    //
     backgroundColor: '#FFFFFF',
   },
   titleContainer: {
-    alignItems: 'center',
-    marginTop: 80, 
+    //alignItems: 'center',
+    backgroundColor: 'black',
+    flexDirection: 'column',
+    width: '100%',
   },
   titleTransformContainer: {
     transform: [
@@ -238,23 +249,55 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
   },
   title: {
-    fontSize: 45,
+    fontSize: 55,
+    marginTop: 20,
     fontWeight: 'bold',
-    color: '#000000',
+    color: 'white',
     textAlign: 'center',
     width: '100%',
-    paddingBottom: 15,
   },
   titleUnderline: {
     height: 5,
     width: '50%',
-    backgroundColor: '#000000',
-    marginBottom: 20,
+    backgroundColor: 'white',
+    marginTop: 50,
+    alignSelf: 'center'
+  },
+  header: {
+    fontSize: 18,
+    color: 'white',
+  },
+  headerContainer: {
+    backgroundColor: "#007AFF",
+    marginLeft: 14,
+    marginBottom: 2,
+    marginTop: 15,
+    paddingTop: 2,
+    paddingBottom: 2,
+    paddingLeft: 8,
+    paddingRight: 8,
+    borderRadius: 20,
+    alignSelf: 'flex-start',
+  },
+  textBubbleBig: {
+    backgroundColor: "#007AFF",
+    borderRadius: 10,
+    marginLeft: 10,
+    alignSelf: 'flex-start',
+  },
+  textBubbleSmall: {
+    backgroundColor: "#007AFF",
+    borderRadius: 10,
+    marginTop: 0,
+    marginLeft: 5,
+    marginBottom: 10,
+    alignSelf: 'flex-start',
   },
   groupsList: {
     width: '100%',
     maxHeight: 300,
     marginBottom: 140,
+    padding: 15
   },
   groupCard: {
     marginBottom: 15,
@@ -266,7 +309,7 @@ const styles = StyleSheet.create({
   },
   addGroupCard: {
     marginBottom: 15,
-    padding: 20,
+    padding: 15,
     borderWidth: 2,
     borderColor: '#000000',
     borderStyle: 'dashed',
@@ -332,13 +375,14 @@ const styles = StyleSheet.create({
   input: {
     width: '100%',
     padding: 15,
-    marginBottom: 20,
+    marginBottom: 15,
     borderWidth: 2,
     borderColor: '#000000',
     borderRadius: 10,
     backgroundColor: '#FFFFFF',
     color: '#000000',
     fontSize: 16,
+    padding: 15,
   },
   button: {
     backgroundColor: '#000000',
@@ -347,6 +391,7 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     width: '100%',
     alignItems: 'center',
+    padding: 15,
   },
   buttonText: {
     fontSize: 18,
@@ -365,7 +410,8 @@ const styles = StyleSheet.create({
   },
   bottomContainer: {
     width: '100%',
-    marginBottom: 20,
+    marginBottom: 10,
+    padding: 20,
   },
 });
 
