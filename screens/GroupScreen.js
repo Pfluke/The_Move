@@ -138,13 +138,13 @@ const GroupScreen = ({ navigation, route }) => {
         </View>
         <View style={styles.titleUnderline}/>
         <View style={styles.headerContainer}>
-          <Text style={styles.header}>What are the moves later?</Text>
+          <Text style={styles.header}>What are we doing later?</Text>
         </View>
         <View style={styles.textBubbleBig}>
-          <Text style={{ fontSize: 12 }}>       </Text>
+          <Text style={{ fontSize: 9 }}>       </Text>
         </View>
         <View style={styles.textBubbleSmall}>
-          <Text style={{ fontSize: 10 }}>    </Text>
+          <Text style={{ fontSize: 6 }}>    </Text>
         </View>
       </View>
       {/* <View style={styles.titleUnderline}></View> */}
@@ -232,11 +232,9 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'space-between',
     alignItems: 'center',
-    //
     backgroundColor: '#FFFFFF',
   },
   titleContainer: {
-    //alignItems: 'center',
     backgroundColor: 'black',
     flexDirection: 'column',
     width: '100%',
@@ -284,6 +282,7 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     marginLeft: 10,
     alignSelf: 'flex-start',
+    marginTop: 2,
   },
   textBubbleSmall: {
     backgroundColor: "#007AFF",
@@ -292,11 +291,12 @@ const styles = StyleSheet.create({
     marginLeft: 5,
     marginBottom: 10,
     alignSelf: 'flex-start',
+    marginTop: 2,
   },
   groupsList: {
     width: '100%',
     maxHeight: 300,
-    marginBottom: 140,
+    marginBottom: 120,
     padding: 15
   },
   groupCard: {
@@ -410,7 +410,6 @@ const styles = StyleSheet.create({
   },
   bottomContainer: {
     width: '100%',
-    marginBottom: 10,
     padding: 20,
   },
 });

@@ -7,6 +7,12 @@ const WelcomeScreen = ({ navigation }) => {
       <View style={styles.headerContainer}>
         <Text style={styles.headerText}> What's...</Text>
       </View>
+      <View style={styles.textBubbleBig}>
+        <Text style={{ fontSize: 10 }}>       </Text>
+      </View>
+      <View style={styles.textBubbleSmall}>
+        <Text style={{ fontSize: 8 }}>    </Text>
+      </View>
       <View style={styles.innerContainer}>
         <View style={styles.titleContainer}>
           <View style={styles.titleTransformContainer}>
@@ -28,12 +34,12 @@ const WelcomeScreen = ({ navigation }) => {
 const styles = StyleSheet.create({
   outerContainer: {
     flex: 1,
-    backgroundColor: 'white',
+    backgroundColor: 'black',
     paddingTop: 50,
   },
   innerContainer: {
     flex: 1,
-    backgroundColor: 'white',
+    backgroundColor: 'black',
     alignItems: 'center',
     justifyContent: 'center',
     width: '100%',
@@ -45,21 +51,37 @@ const styles = StyleSheet.create({
   },
   headerContainer: {
     paddingHorizontal: 17,
-    borderRadius: 8,
+    borderRadius: 20,
     alignSelf: 'flex-start',
-    marginBottom: 0,
-    paddingTop: 0,
+    backgroundColor: "#007AFF",
+    paddingTop: 4,
+    paddingBottom: 4,
+    paddingLeft: 10,
+    paddingRight: 10,
+    marginLeft: 20,
+  },
+  textBubbleBig: {
+    backgroundColor: "#007AFF",
+    borderRadius: 10,
+    alignSelf: 'flex-start',
+    marginLeft: 17,
+    marginTop: 3,
+  },
+  textBubbleSmall: {
+    backgroundColor: "#007AFF",
+    borderRadius: 10,
+    marginLeft: 10,
+    alignSelf: 'flex-start',
+    marginTop: 3,
   },
   headerText: {
-    fontSize: 35,
-    color: "black",
-    transform: [{ scaleX: 0.8 }, { scaleY: 1.2 }],
-    paddingTop: 18,
+    fontSize: 30,
+    color: "white",
   },
   title: {
     fontSize: 75,
     fontWeight: 'bold',
-    color: 'black',
+    color: 'white',
     textAlign: 'center',
     width: '100%',
     paddingBottom: 30,
@@ -71,20 +93,20 @@ const styles = StyleSheet.create({
   underline: {
     height: 5,
     width: '85%',
-    backgroundColor: 'black',
+    backgroundColor: 'white',
   },
   button: {
-    backgroundColor: 'white',
+    backgroundColor: 'black',
     paddingVertical: 15,
     paddingHorizontal: 30,
     borderRadius: 10,
     borderWidth: 2,
-    borderColor: 'black',
+    borderColor: 'white',
   },
   buttonText: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: 'black',
+    color: 'white',
   },
 });
 

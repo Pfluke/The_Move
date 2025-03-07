@@ -83,10 +83,10 @@ const LoginScreen = ({ navigation }) => {
           <Text style={styles.header}>...okay, but what is it??</Text>
         </View>
         <View style={styles.textBubbleBig}>
-          <Text style={{ fontSize: 12 }}>       </Text>
+          <Text style={{ fontSize: 9 }}>       </Text>
         </View>
         <View style={styles.textBubbleSmall}>
-          <Text style={{ fontSize: 10 }}>    </Text>
+          <Text style={{ fontSize: 6 }}>    </Text>
         </View>
       </View>
       
@@ -141,16 +141,14 @@ const LoginScreen = ({ navigation }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    //justifyContent: 'space-between',
+    justifyContent: 'space-between',
     alignItems: 'center',
     backgroundColor: '#FFFFFF',
   },
   titleContainer: {
-    alignItems: 'center',
     backgroundColor: 'black',
     flexDirection: 'column',
     width: '100%',
-    paddingTop: 40,
   },
   titleTransformContainer: {
     transform: [
@@ -172,32 +170,37 @@ const styles = StyleSheet.create({
   },
   headerContainer: {
     backgroundColor: "#007AFF",
-    marginLeft: 150,
-    marginBottom: 4,
+    alignSelf: 'flex-end',
+    marginBottom: 2,
     marginTop: 15,
     paddingTop: 2,
     paddingBottom: 2,
     paddingLeft: 8,
     paddingRight: 8,
     borderRadius: 20,
+    marginRight: 14,
   },
   textBubbleBig: {
     backgroundColor: "#007AFF",
     borderRadius: 10,
-    marginLeft: 330,
+    alignSelf: 'flex-end',
+    marginRight: 10,
+    marginTop: 2,
   },
   textBubbleSmall: {
     backgroundColor: "#007AFF",
     borderRadius: 10,
-    marginTop: 0,
-    marginLeft: 360,
+    marginRight: 5,
     marginBottom: 10,
+    alignSelf: 'flex-end',
+    marginTop: 2,
   },
   titleUnderline: {
     height: 5,
     width: '50%',
     backgroundColor: 'white',
     marginTop: 75,
+    alignSelf: 'center',
   },
   loginContainer: {
     width: '100%',
@@ -247,8 +250,9 @@ const styles = StyleSheet.create({
   },
   successText: {
     marginTop: 10,
-    color: '#00FF00',
+    color: '#018749',
     fontSize: 16,
+    fontWeight: 'bold',
   },
   errorText: {
     marginBottom: 10,
