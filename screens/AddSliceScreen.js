@@ -4,6 +4,8 @@ import * as ImagePicker from 'expo-image-picker';
 import { getFirestore, doc, updateDoc } from 'firebase/firestore';
 import { app } from '../firebaseConfig';
 import { Picker } from '@react-native-picker/picker';
+import { getDoc } from 'firebase/firestore';
+
 
 const db = getFirestore(app);
 
@@ -25,9 +27,10 @@ const AddSliceScreen = ({ navigation, route }) => {
       quality: 1,
     });
 
-    if (!result.cancelled) {
-      setImageUri(result.uri);
-    }
+    if (!result.canceled) {
+        setImageUri(result.assets[0].uri);
+      }
+      
   };
 
   const generateTimeSlots = () => {
@@ -51,8 +54,17 @@ const AddSliceScreen = ({ navigation, route }) => {
 
   const addSlice = async () => {
     if (inputText.trim() !== '' && description.trim() !== '' && selectedDays.length > 0 && startTime && endTime) {
-      const newSlice = inputText.trim();
       try {
+        const groupRef = doc(db, "groups", groupName);
+        const docSnap = await getDoc(groupRef);
+  
+        let existingSlices = {};
+        if (docSnap.exists()) {
+          const data = docSnap.data();
+          existingSlices = data.slices || {}; // Ensure it's an object
+        }
+  
+        const newSliceName = inputText.trim();
         const newSliceData = {
           votes: 0,
           voters: {},
@@ -62,11 +74,12 @@ const AddSliceScreen = ({ navigation, route }) => {
           endTime: endTime,
           imageUri: imageUri || '',
         };
-
-        await updateDoc(doc(db, "groups", groupName), {
-          [`slices.${newSlice}`]: newSliceData
+  
+        // Store slices as an object
+        await updateDoc(groupRef, {
+          [`slices.${newSliceName}`]: newSliceData
         });
-
+  
         Alert.alert("Success", "Slice added!");
         navigation.goBack();
       } catch (error) {
@@ -77,6 +90,8 @@ const AddSliceScreen = ({ navigation, route }) => {
       Alert.alert("Invalid Input", "All fields must be filled.");
     }
   };
+  
+  
 
   return (
     <View style={styles.container}>

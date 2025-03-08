@@ -8,6 +8,9 @@ import LoginScreen from './screens/LoginScreen';
 import GroupScreen from './screens/GroupScreen';
 import Screen3 from './screens/EventScreen';
 import AddSliceScreen from './screens/AddSliceScreen';
+import DayCalendar from './screens/DayCalendar';
+import Event from './screens/Event';
+import WheelOfFortune from './screens/WheelOfFortune';
 
 // Stack navigator setup
 const Stack = createStackNavigator();
@@ -29,6 +32,9 @@ const App = () => {
         }} />
         <Stack.Screen name="Screen3" component={Screen3} />
         <Stack.Screen name="AddSliceScreen" component={AddSliceScreen} />
+        <Stack.Screen name="DayCalendar" component={DayCalendar} />
+        <Stack.Screen name="Event" component={Event} />
+        <Stack.Screen name="WheelOfFortune" component={WheelOfFortune} />
       </Stack.Navigator>
     </NavigationContainer>
   );
