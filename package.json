@@ -38,9 +38,7 @@
     "react-native-screens": "~4.4.0",
     "react-native-svg": "^15.8.0",
     "react-native-web": "~0.19.13",
-    "react-native-wheel-of-fortune": "^1.5.4",
-    "socket.io": "^4.8.1",
-    "socket.io-client": "^4.8.1"
+    "react-native-wheel-of-fortune": "^1.5.4"
   },
   "devDependencies": {
     "@babel/core": "^7.20.0"
