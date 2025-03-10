@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, TextInput, Text, StyleSheet, TouchableOpacity, Alert } from 'react-native';
+import { View, TextInput, Text, StyleSheet, TouchableOpacity, Alert, Keyboard } from 'react-native';
 import { getFirestore, doc, getDoc, setDoc, collection, query, where, getDocs } from 'firebase/firestore';
 import { app } from '../firebaseConfig'; // Adjust the import path as needed
 
@@ -77,6 +77,17 @@ const LoginScreen = ({ navigation }) => {
     }
   };
 
+  // Handle key press for Enter key submission (Login)
+  const handleKeyPress = (e) => {
+    if (e.nativeEvent.key === 'Enter') {
+      Keyboard.dismiss(); // Dismiss keyboard on Enter press
+      handleLogin(); // Trigger login
+    } else if(e.nativeEvent.key === "Tab"){
+      e.preventDefault(); // Prevent the default tab behavior
+      passwordInputRef.current.focus(); // Focus the password input
+    }
+  };
+
   return (
     <View style={styles.container}>
       {/* Title Section */}
@@ -108,6 +119,8 @@ const LoginScreen = ({ navigation }) => {
           placeholderTextColor="#888"
           value={username}
           onChangeText={setUsername}
+          returnKeyType="next"
+          onKeyPress={handleKeyPress} // Listen for Enter key press
         />
         <TextInput
           style={styles.input}
@@ -116,6 +129,9 @@ const LoginScreen = ({ navigation }) => {
           value={password}
           onChangeText={setPassword}
           secureTextEntry={true}
+          returnKeyType="done" // Set the return key to "Done"
+          ref={(input) => { this.passwordInput = input; }} // Reference the password input for focus
+          onKeyPress={handleKeyPress} // Listen for Enter key press
         />
 
         {/* Create Account Button */}
