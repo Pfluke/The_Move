@@ -1,12 +1,21 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, TextInput, Alert, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import {
+  View,
+  Text,
+  TextInput,
+  Alert,
+  StyleSheet,
+  ScrollView,
+  TouchableOpacity,
+  Keyboard,
+  KeyboardAvoidingView,
+  Platform,
+} from 'react-native';
 // Firebase imports:
-import { initializeApp } from 'firebase/app';
 import { getFirestore, collection, query, where, onSnapshot, doc, updateDoc, arrayUnion, setDoc, arrayRemove, deleteDoc, serverTimestamp } from 'firebase/firestore';
-import { firebaseConfig, app } from '../firebaseConfig';
+import { app } from '../firebaseConfig'; // Adjust the import path as needed
 
-// Initialize Firebase app and Firestore
-//const app = initializeApp(firebaseConfig);
+// Initialize Firestore
 const db = getFirestore(app);
 
 const GroupScreen = ({ navigation, route }) => {
@@ -16,6 +25,7 @@ const GroupScreen = ({ navigation, route }) => {
   const [groupName, setGroupName] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
   const [creators, setCreators] = useState({}); // Mapping from group ID to creator
+  const [isKeyboardVisible, setKeyboardVisible] = useState(false); // Track keyboard visibility
 
   // Fetch groups from Firestore, members are users
   useEffect(() => {
@@ -41,6 +51,28 @@ const GroupScreen = ({ navigation, route }) => {
     return () => unsubscribe();
   }, [username]);
 
+  // Listen for keyboard show/hide events
+  useEffect(() => {
+    const keyboardDidShowListener = Keyboard.addListener(
+      Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow',
+      () => {
+        setKeyboardVisible(true); // Set keyboard visibility to true
+      }
+    );
+
+    const keyboardDidHideListener = Keyboard.addListener(
+      Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide',
+      () => {
+        setKeyboardVisible(false); // Set keyboard visibility to false
+      }
+    );
+
+    return () => {
+      keyboardDidShowListener.remove();
+      keyboardDidHideListener.remove();
+    };
+  }, []);
+
   // Firestore write functions:
   const joinGroupFirestore = async (groupId, user) => {
     try {
@@ -49,7 +81,6 @@ const GroupScreen = ({ navigation, route }) => {
         members: arrayUnion(user.toLowerCase())
       });
     } catch (error) {
-      //console.error("Error joining group: ", error);
       Alert.alert('Error', 'This group could not be found. Please try a different group name');
       setErrorMessage(error.message);
     }
@@ -131,84 +162,75 @@ const GroupScreen = ({ navigation, route }) => {
   };
 
   return (
-    <View style={styles.container}>
-      {/* Title Section */}
-      <View style={styles.titleContainer}>
-        <View style={styles.titleTransformContainer}>
-          <Text style={styles.title}>THE MOVE</Text>
+    <KeyboardAvoidingView
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'} // adjust behavior based on platform
+      style={styles.container}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 60 : 0} // adjust offset if needed
+    >
+      {/* Scrollable Content */}
+      <ScrollView
+        contentContainerStyle={styles.scrollContainer}
+        keyboardShouldPersistTaps="handled" // allow taps to dismiss the keyboard
+      >
+        {/* Title Section */}
+        <View style={styles.titleContainer}>
+          <View style={styles.titleTransformContainer}>
+            <Text style={styles.title}>THE MOVE</Text>
+          </View>
+          <View style={styles.titleUnderline} />
+          <View style={styles.headerContainer}>
+            <Text style={styles.header}>What are we doing later?</Text>
+          </View>
+          <View style={styles.textBubbleBig}>
+            <Text style={{ fontSize: 9 }}>       </Text>
+          </View>
+          <View style={styles.textBubbleSmall}>
+            <Text style={{ fontSize: 6 }}>    </Text>
+          </View>
         </View>
-        <View style={styles.titleUnderline}/>
-        <View style={styles.headerContainer}>
-          <Text style={styles.header}>What are we doing later?</Text>
-        </View>
-        <View style={styles.textBubbleBig}>
-          <Text style={{ fontSize: 9 }}>       </Text>
-        </View>
-        <View style={styles.textBubbleSmall}>
-          <Text style={{ fontSize: 6 }}>    </Text>
-        </View>
-      </View>
-      {/* <View style={styles.titleUnderline}></View> */}
-      {/* <Text style={styles.headerLeft}>...c'mon, WTM!?</Text>
-      <Text style={styles.headerRight}>...patience, my friend.</Text>
-      <Text>What's Up, {username}!</Text> */}
-      {/* Placeholder!
-      <View style={styles.welcomeTransformContainer}>
-        <Text style={styles.welcomeText}>
-          Hey there, <Text style={[styles.welcomeText, { fontWeight: 'bold' }]}>{username}</Text>
-        </Text>
-      </View>
-      <View style={styles.welcomeUnderline}></View>
-      {/* Wrap message in <Text> */}
-      {/* {message && <Text>{message}</Text>} */}
-      {/* Wrap error message in <Text> */} 
 
-      {/* Error Message */}
-      {errorMessage && <Text style={styles.errorText}>{errorMessage}</Text>}
-      
-      {/* Group List */}
-      <ScrollView style={styles.groupsList}>
-        {userGroups.length > 0 ? (
-          userGroups.map((group) => (
-            <View key={group.id} style={styles.groupCard}>
-              <Text style={styles.groupName}>Group: {group.id}</Text>
-              <Text style={styles.creatorText}>Creator: {creators[group.id] || 'No creator found'}</Text>
-              <View style={styles.buttonContainer}>
-                <TouchableOpacity
-                  style={styles.actionButton}
-                  onPress={() => navigation.navigate('EventScreen', { username, groupName: group.id })}
-                >
-                  <Text style={styles.actionButtonText}>Go to {group.id}</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={styles.leaveButton}
-                  onPress={() => leaveGroup(group.id)}
-                >
-                  <Text style={styles.leaveButtonText}>Leave Group</Text>
-                </TouchableOpacity>
+        {/* Error Message */}
+        {errorMessage && <Text style={styles.errorText}>{errorMessage}</Text>}
+
+        {/* Group List */}
+        <View style={styles.groupsList}>
+          {userGroups.length > 0 ? (
+            userGroups.map((group) => (
+              <View key={group.id} style={styles.groupCard}>
+                <Text style={styles.groupName}>Group: {group.id}</Text>
+                <Text style={styles.creatorText}>Creator: {creators[group.id] || 'No creator found'}</Text>
+                <View style={styles.buttonContainer}>
+                  <TouchableOpacity
+                    style={styles.actionButton}
+                    onPress={() => navigation.navigate('EventScreen', { username, groupName: group.id })}
+                  >
+                    <Text style={styles.actionButtonText}>Go to {group.id}</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={styles.leaveButton}
+                    onPress={() => leaveGroup(group.id)}
+                  >
+                    <Text style={styles.leaveButtonText}>Leave Group</Text>
+                  </TouchableOpacity>
+                </View>
+                {creators[group.id] === username.toLowerCase() && (
+                  <TouchableOpacity
+                    style={styles.deleteButton}
+                    onPress={() => handleDeleteGroup(group.id)}
+                  >
+                    <Text style={styles.deleteButtonText}>Delete Group</Text>
+                  </TouchableOpacity>
+                )}
               </View>
-              {creators[group.id] === username.toLowerCase() && (
-                <TouchableOpacity
-                  style={styles.deleteButton}
-                  onPress={() => handleDeleteGroup(group.id)}
-                >
-                  <Text style={styles.deleteButtonText}>Delete Group</Text>
-                </TouchableOpacity>
-              )}
-            </View>
-          ))
-        ) : (
-          <TouchableOpacity
-            style={styles.addGroupCard}
-            onPress={() => setGroupName('')}
-          >
-            <Text style={styles.addGroupText}>+ Add Group</Text>
-          </TouchableOpacity>
-        )}
+            ))
+          ) : (
+            <Text style={styles.noGroupsText}>No groups found. Create or join a group!</Text>
+          )}
+        </View>
       </ScrollView>
-      
-      {/* Group Input and Buttons */}
-      <View style={styles.bottomContainer}>
+
+      {/* Fixed Bottom Section */}
+      <View style={[styles.bottomContainer, { bottom: isKeyboardVisible ? 325 : 0 }]}>
         <TextInput
           style={styles.input}
           placeholder="ENTER GROUP NAME"
@@ -224,21 +246,24 @@ const GroupScreen = ({ navigation, route }) => {
           <Text style={styles.buttonText}>CREATE GROUP</Text>
         </TouchableOpacity>
       </View>
-    </View>
+    </KeyboardAvoidingView>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    justifyContent: 'space-between',
-    alignItems: 'center',
     backgroundColor: '#FFFFFF',
+  },
+  scrollContainer: {
+    flexGrow: 1,
+    paddingBottom: 150, // add padding to ensure the bottom section doesn't overlap
   },
   titleContainer: {
     backgroundColor: 'black',
     flexDirection: 'column',
     width: '100%',
+    paddingTop: 50.
   },
   titleTransformContainer: {
     transform: [
@@ -296,9 +321,7 @@ const styles = StyleSheet.create({
   },
   groupsList: {
     width: '100%',
-    maxHeight: 300,
-    marginBottom: 120,
-    padding: 15
+    padding: 15,
   },
   groupCard: {
     marginBottom: 15,
@@ -307,21 +330,6 @@ const styles = StyleSheet.create({
     borderColor: '#000000',
     borderRadius: 10,
     backgroundColor: '#F5F5F5',
-  },
-  addGroupCard: {
-    marginBottom: 15,
-    padding: 15,
-    borderWidth: 2,
-    borderColor: '#000000',
-    borderStyle: 'dashed',
-    borderRadius: 10,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  addGroupText: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#000000',
   },
   groupName: {
     fontSize: 18,
@@ -373,6 +381,12 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#FF0000',
   },
+  noGroupsText: {
+    fontSize: 16,
+    color: '#888',
+    textAlign: 'center',
+    marginTop: 20,
+  },
   input: {
     width: '100%',
     padding: 15,
@@ -383,7 +397,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     color: '#000000',
     fontSize: 16,
-    padding: 15,
   },
   button: {
     backgroundColor: '#000000',
@@ -392,7 +405,6 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     width: '100%',
     alignItems: 'center',
-    padding: 15,
   },
   buttonText: {
     fontSize: 18,
@@ -400,7 +412,7 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
   },
   buttonSpacer: {
-    height: 10,
+    height: 15,
   },
   errorText: {
     color: '#FF0000',
@@ -412,6 +424,10 @@ const styles = StyleSheet.create({
   bottomContainer: {
     width: '100%',
     padding: 20,
+    backgroundColor: '#FFFFFF',
+    position: 'absolute',
+    left: 0,
+    right: 0,
   },
 });
 

@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { View, TextInput, Text, StyleSheet, TouchableOpacity, Alert, Keyboard } from 'react-native';
+import React, { useState, useRef } from 'react';
+import { View, TextInput, Text, StyleSheet, TouchableOpacity, Alert, Keyboard, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
 import { getFirestore, doc, getDoc, setDoc, collection, query, where, getDocs } from 'firebase/firestore';
 import { app } from '../firebaseConfig'; // Adjust the import path as needed
 
@@ -11,44 +11,47 @@ const LoginScreen = ({ navigation }) => {
   const [errorMessage, setErrorMessage] = useState('');
   const [loginMessage, setLoginMessage] = useState('');
 
+  // Create a ref for the password input
+  const passwordInputRef = useRef(null);
+
   const showError = (message) => {
     setErrorMessage(message);
-    setTimeout(() => setErrorMessage(""), 2000);
+    setTimeout(() => setErrorMessage(''), 2000);
   };
 
   // Handle login using Firestore
   const handleLogin = async () => {
     if (username && password) {
       try {
-        const userDocRef = doc(db, "users", username.toLowerCase());
+        const userDocRef = doc(db, 'users', username.toLowerCase());
         const userDoc = await getDoc(userDocRef);
         if (userDoc.exists()) {
           const userData = userDoc.data();
           if (userData.password === password) {
-            setLoginMessage("Login successful!");
+            setLoginMessage('Login successful!');
             const groupsQuery = query(
-              collection(db, "groups"),
-              where("members", "array-contains", username.toLowerCase())
+              collection(db, 'groups'),
+              where('members', 'array-contains', username.toLowerCase()),
             );
             const groupsSnapshot = await getDocs(groupsQuery);
             const userGroups = [];
             groupsSnapshot.forEach((docSnap) => {
               userGroups.push(docSnap.id);
             });
-  
+
             navigation.navigate('GroupScreen', { username, userGroups });
           } else {
-            showError("Incorrect password");
+            showError('Incorrect password');
           }
         } else {
-          showError("User does not exist");
+          showError('User does not exist');
         }
       } catch (error) {
-        console.error("Error during login", error);
+        console.error('Error during login', error);
         showError(error.message);
       }
     } else {
-      showError("PLEASE ENTER BOTH A USERNAME AND PASSWORD");
+      showError('PLEASE ENTER BOTH A USERNAME AND PASSWORD');
     }
   };
 
@@ -56,24 +59,24 @@ const LoginScreen = ({ navigation }) => {
   const handleCreate = async () => {
     if (username && password) {
       try {
-        const userDocRef = doc(db, "users", username.toLowerCase());
+        const userDocRef = doc(db, 'users', username.toLowerCase());
         const userDoc = await getDoc(userDocRef);
         if (userDoc.exists()) {
           setErrorMessage(`User '${username}' already exists.`);
-          setTimeout(() => setErrorMessage(""), 2000);
+          setTimeout(() => setErrorMessage(''), 2000);
         } else {
           await setDoc(userDocRef, { username: username.toLowerCase(), password });
-          setLoginMessage("Account created successfully!");
+          setLoginMessage('Account created successfully!');
           navigation.navigate('GroupScreen', { username, userGroups: [] });
         }
       } catch (error) {
-        console.error("Error creating account", error);
+        console.error('Error creating account', error);
         setErrorMessage(error.message);
-        setTimeout(() => setErrorMessage(""), 2000);
+        setTimeout(() => setErrorMessage(''), 2000);
       }
     } else {
-      setErrorMessage("PLEASE ENTER BOTH A USERNAME AND PASSWORD");
-      setTimeout(() => setErrorMessage(""), 2000);
+      setErrorMessage('PLEASE ENTER BOTH A USERNAME AND PASSWORD');
+      setTimeout(() => setErrorMessage(''), 2000);
     }
   };
 
@@ -82,90 +85,101 @@ const LoginScreen = ({ navigation }) => {
     if (e.nativeEvent.key === 'Enter') {
       Keyboard.dismiss(); // Dismiss keyboard on Enter press
       handleLogin(); // Trigger login
-    } else if(e.nativeEvent.key === "Tab"){
+    } else if (e.nativeEvent.key === 'Tab') {
       e.preventDefault(); // Prevent the default tab behavior
-      passwordInputRef.current.focus(); // Focus the password input
+      passwordInputRef.current.focus(); // Focus the password input using the ref
     }
   };
 
   return (
-    <View style={styles.container}>
-      {/* Title Section */}
-      <View style={styles.titleContainer}>
-        <View style={styles.titleTransformContainer}>
-          <Text style={styles.title}>THE MOVE</Text>
+    <KeyboardAvoidingView
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'} // behavior based off platform
+      style={styles.container}
+      // keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0} // offset adjustment
+    >
+      <ScrollView // wrap the content in a scroll view
+        contentContainerStyle={styles.scrollContainer} // Ensure the content is scrollable
+        keyboardShouldPersistTaps="handled" // Allow taps to dismiss the keyboard
+      >
+        {/* Title Section */}
+        <View style={styles.titleContainer}>
+          <View style={styles.titleTransformContainer}>
+            <Text style={styles.title}>THE MOVE</Text>
+          </View>
+          <View style={styles.titleUnderline} />
+          <View style={styles.headerContainer}>
+            <Text style={styles.header}>...okay, but what is it??</Text>
+          </View>
+          <View style={styles.textBubbleBig}>
+            <Text style={{ fontSize: 9 }}>       </Text>
+          </View>
+          <View style={styles.textBubbleSmall}>
+            <Text style={{ fontSize: 6 }}>    </Text>
+          </View>
         </View>
-        <View style={styles.titleUnderline}/>
-        <View style={styles.headerContainer}>
-          <Text style={styles.header}>...okay, but what is it??</Text>
+
+        {/* Login Section */}
+        <View style={styles.loginContainer}>
+          <Text style={styles.login}>LOG IN</Text>
+          <View style={styles.loginUnderline}></View>
+          {errorMessage ? <Text style={styles.errorText}>{errorMessage}</Text> : null}
+          <TextInput
+            style={styles.input}
+            placeholder="username"
+            placeholderTextColor="#888"
+            value={username}
+            onChangeText={setUsername}
+            returnKeyType="next"
+            onKeyPress={handleKeyPress} // Listen for Enter key press
+          />
+          <TextInput
+            style={styles.input}
+            placeholder="password"
+            placeholderTextColor="#888"
+            value={password}
+            onChangeText={setPassword}
+            secureTextEntry={true}
+            returnKeyType="done" // Set the return key to "Done"
+            ref={passwordInputRef} // Assign the ref to the password input
+            onKeyPress={handleKeyPress} // Listen for Enter key press
+          />
+
+          {/* Create Account Button */}
+          <TouchableOpacity
+            style={styles.button}
+            onPress={handleCreate}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.buttonText}>CREATE ACCOUNT</Text>
+          </TouchableOpacity>
+
+          <View style={styles.buttonSpacer} />
+
+          {/* Login Button */}
+          <TouchableOpacity
+            style={styles.button}
+            onPress={handleLogin}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.buttonText}>LOGIN</Text>
+          </TouchableOpacity>
+
+          {loginMessage ? <Text style={styles.successText}>{loginMessage}</Text> : null}
         </View>
-        <View style={styles.textBubbleBig}>
-          <Text style={{ fontSize: 9 }}>       </Text>
-        </View>
-        <View style={styles.textBubbleSmall}>
-          <Text style={{ fontSize: 6 }}>    </Text>
-        </View>
-      </View>
-      
-      
-      {/* Login Section */}
-      <View style={styles.loginContainer}>
-        <Text style={styles.login}>LOG IN</Text>
-        <View style={styles.loginUnderline}></View>
-        {errorMessage ? <Text style={styles.errorText}>{errorMessage}</Text> : null}
-        <TextInput
-          style={styles.input}
-          placeholder="username"
-          placeholderTextColor="#888"
-          value={username}
-          onChangeText={setUsername}
-          returnKeyType="next"
-          onKeyPress={handleKeyPress} // Listen for Enter key press
-        />
-        <TextInput
-          style={styles.input}
-          placeholder="password"
-          placeholderTextColor="#888"
-          value={password}
-          onChangeText={setPassword}
-          secureTextEntry={true}
-          returnKeyType="done" // Set the return key to "Done"
-          ref={(input) => { this.passwordInput = input; }} // Reference the password input for focus
-          onKeyPress={handleKeyPress} // Listen for Enter key press
-        />
-
-        {/* Create Account Button */}
-        <TouchableOpacity
-          style={styles.button}
-          onPress={handleCreate}
-          activeOpacity={0.7}
-        >
-          <Text style={styles.buttonText}>CREATE ACCOUNT</Text>
-        </TouchableOpacity>
-
-        <View style={styles.buttonSpacer} />
-
-        {/* Login Button */}
-        <TouchableOpacity
-          style={styles.button}
-          onPress={handleLogin}
-          activeOpacity={0.7}
-        >
-          <Text style={styles.buttonText}>LOGIN</Text>
-        </TouchableOpacity>
-
-        {loginMessage ? <Text style={styles.successText}>{loginMessage}</Text> : null}
-      </View>
-    </View>
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: '#FFFFFF',
+  },
+  scrollContainer: {
+    flexGrow: 1, // Ensure the content grows to fill the available space
     justifyContent: 'space-between',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
   },
   titleContainer: {
     backgroundColor: 'black',
@@ -175,7 +189,7 @@ const styles = StyleSheet.create({
   titleTransformContainer: {
     transform: [
       { scaleX: 0.9 },
-      { scaleY: 2.8 }
+      { scaleY: 2.8 },
     ],
   },
   title: {
@@ -191,7 +205,7 @@ const styles = StyleSheet.create({
     color: 'white',
   },
   headerContainer: {
-    backgroundColor: "#007AFF",
+    backgroundColor: '#007AFF',
     alignSelf: 'flex-end',
     marginBottom: 2,
     marginTop: 15,
@@ -203,14 +217,14 @@ const styles = StyleSheet.create({
     marginRight: 14,
   },
   textBubbleBig: {
-    backgroundColor: "#007AFF",
+    backgroundColor: '#007AFF',
     borderRadius: 10,
     alignSelf: 'flex-end',
     marginRight: 10,
     marginTop: 2,
   },
   textBubbleSmall: {
-    backgroundColor: "#007AFF",
+    backgroundColor: '#007AFF',
     borderRadius: 10,
     marginRight: 5,
     marginBottom: 10,
