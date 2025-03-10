@@ -4,7 +4,7 @@
     "slug": "my-app",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/arrowsicon.png",
+    "icon": "./assets/arrowsiconupdated.png",
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
     "splash": {
@@ -23,7 +23,7 @@
       }
     },
     "web": {
-      "favicon": "./assets/arrowsicon.png"
+      "favicon": "./assets/arrowsiconupdated.png"
     },
     "plugins": [
       "expo-font"
