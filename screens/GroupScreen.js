@@ -49,7 +49,8 @@ const GroupScreen = ({ navigation, route }) => {
         members: arrayUnion(user.toLowerCase())
       });
     } catch (error) {
-      console.error("Error joining group: ", error);
+      //console.error("Error joining group: ", error);
+      Alert.alert('Error', 'This group could not be found. Please try a different group name');
       setErrorMessage(error.message);
     }
   };

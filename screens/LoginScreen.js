@@ -11,6 +11,11 @@ const LoginScreen = ({ navigation }) => {
   const [errorMessage, setErrorMessage] = useState('');
   const [loginMessage, setLoginMessage] = useState('');
 
+  const showError = (message) => {
+    setErrorMessage(message);
+    setTimeout(() => setErrorMessage(""), 2000);
+  };
+
   // Handle login using Firestore
   const handleLogin = async () => {
     if (username && password) {
@@ -21,8 +26,6 @@ const LoginScreen = ({ navigation }) => {
           const userData = userDoc.data();
           if (userData.password === password) {
             setLoginMessage("Login successful!");
-
-            // fetch groups where the user is a member
             const groupsQuery = query(
               collection(db, "groups"),
               where("members", "array-contains", username.toLowerCase())
@@ -32,20 +35,20 @@ const LoginScreen = ({ navigation }) => {
             groupsSnapshot.forEach((docSnap) => {
               userGroups.push(docSnap.id);
             });
-
+  
             navigation.navigate('GroupScreen', { username, userGroups });
           } else {
-            setErrorMessage("Incorrect password");
+            showError("Incorrect password");
           }
         } else {
-          setErrorMessage("User does not exist");
+          showError("User does not exist");
         }
       } catch (error) {
         console.error("Error during login", error);
-        setErrorMessage(error.message);
+        showError(error.message);
       }
     } else {
-      setErrorMessage("PLEASE ENTER BOTH A USERNAME AND PASSWORD");
+      showError("PLEASE ENTER BOTH A USERNAME AND PASSWORD");
     }
   };
 
@@ -57,6 +60,7 @@ const LoginScreen = ({ navigation }) => {
         const userDoc = await getDoc(userDocRef);
         if (userDoc.exists()) {
           setErrorMessage(`User '${username}' already exists.`);
+          setTimeout(() => setErrorMessage(""), 2000);
         } else {
           await setDoc(userDocRef, { username: username.toLowerCase(), password });
           setLoginMessage("Account created successfully!");
@@ -65,9 +69,11 @@ const LoginScreen = ({ navigation }) => {
       } catch (error) {
         console.error("Error creating account", error);
         setErrorMessage(error.message);
+        setTimeout(() => setErrorMessage(""), 2000);
       }
     } else {
       setErrorMessage("PLEASE ENTER BOTH A USERNAME AND PASSWORD");
+      setTimeout(() => setErrorMessage(""), 2000);
     }
   };
 
