@@ -241,14 +241,21 @@ const EventScreen = ({ navigation, route }) => {
           </ScrollView>
         )}
 
-        <Button
-          title="Go to Wheel Screen"
-          onPress={() => navigation.navigate('WheelOfFortune', { 
-            slices: Object.entries(slices).map(([sliceName, sliceData]) => ({ sliceName, sliceData })), 
+      <Button
+        title="How About Wheel Decide"
+        onPress={() => {
+          if (!slicesForDay || slicesForDay.length === 0) {
+            console.log("No slices available. Cannot navigate.");
+            return;
+          }
+          navigation.navigate('WheelOfFortune', { 
+            slices: slicesForDay.map(([sliceName, sliceData]) => ({ sliceName, sliceData })), 
             username, 
             groupName 
-          })}
-        />
+          });
+        }}
+      />
+
 
         <Button title="Go to Group Screen" onPress={() => navigation.navigate('GroupScreen', { username })} />
       </ScrollView>
