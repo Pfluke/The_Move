@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { View, Text, Button, Alert, StyleSheet, ScrollView, TouchableOpacity, Image, KeyboardAvoidingView, Platform } from 'react-native';
 import { getFirestore, doc, onSnapshot, updateDoc, getDoc, setDoc } from 'firebase/firestore';
 import { app } from '../firebaseConfig';
-import { MaterialIcons } from '@expo/vector-icons'; // For better icons
+import { MaterialIcons } from '@expo/vector-icons'; // better icons
 
 const db = getFirestore(app);
 
@@ -98,8 +98,8 @@ const EventScreen = ({ navigation, route }) => {
 
   const daysOfWeek = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 
-  // Find the event with the most votes
-  const getEventWithMostVotes = () => {
+  // event with most votes
+  const getEventWithMostVotes = () => { 
     let maxVotes = -1;
     let eventWithMostVotes = null;
 
@@ -144,7 +144,7 @@ const EventScreen = ({ navigation, route }) => {
           <Text style={styles.groupText}>{groupName}</Text>
         </View>
 
-        {/* Day Buttons Across the Top */}
+        {/* Day Buttons */}
         <View style={styles.dayButtonsContainer}>
           {daysOfWeek.map((day, index) => (
             <TouchableOpacity
@@ -323,8 +323,8 @@ const styles = StyleSheet.create({
     padding: 8,
     backgroundColor: 'black',
     borderRadius: 3,
-    width: 50, // Uniform width for all buttons
-    alignItems: 'center', // Center text horizontally
+    width: 50, 
+    alignItems: 'center', 
   },
   dayButtonText: {
     color: 'white',
@@ -344,7 +344,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFF',
     borderRadius: 10,
     marginBottom: 10,
-    overflow: 'hidden',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
