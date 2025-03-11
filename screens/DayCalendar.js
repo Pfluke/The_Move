@@ -68,7 +68,7 @@ const DayCalendar = ({ route, navigation }) => {
       )}
 
       {/* Button to navigate to Wheel of Fortune screen */}
-      {slicesForDay && slicesForDay.length > 0 && (
+      {/* {slicesForDay && slicesForDay.length > 0 && (
         <Button
           title="How About Wheel Decide"
           onPress={() => navigation.navigate('WheelOfFortune', { 
@@ -77,7 +77,7 @@ const DayCalendar = ({ route, navigation }) => {
             groupName 
           })}
         />
-      )}
+      )} */}
 
 
     </View>

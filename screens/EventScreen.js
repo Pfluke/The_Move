@@ -211,12 +211,12 @@ const EventScreen = ({ navigation, route }) => {
           </View>
         )}
 
-        {slices && Object.keys(slices).length > 0 && (
+        {/* {slices && Object.keys(slices).length > 0 && (
           <Button
             title="How About Wheel Decide"
             onPress={() => navigation.navigate('WheelOfFortune', { slices: Object.entries(slices).map(([sliceName, sliceData]) => ({ sliceName, sliceData })), username, groupName })}
           />
-        )}
+        )} */}
       </ScrollView>
       <View style={styles.bottomButtonContainer}>
         <Button title="Add Event" onPress={() => navigation.navigate('AddSliceScreen', { groupName })} />
