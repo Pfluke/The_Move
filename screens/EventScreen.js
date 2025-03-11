@@ -181,7 +181,7 @@ const EventScreen = ({ navigation, route }) => {
 
         <Button title="Add Event" onPress={() => navigation.navigate('AddSliceScreen', { groupName })} />
 
-        <Text style={styles.subtitle}>All Slices</Text>
+        <Text style={styles.subtitle}>All Events</Text>
 
         {loadingSlices ? (
           <Text>Loading slices...</Text>
@@ -340,7 +340,7 @@ const styles = StyleSheet.create({
   },
   groupTextContainer: {
     backgroundColor: '#F5F5F5',
-    borderWidth: 0, 
+    borderWidth: 0.5, 
     borderColor: 'black', 
     borderRadius: 10,
     padding: 5, 
@@ -350,7 +350,7 @@ const styles = StyleSheet.create({
   },
   dayButtonsContainer: {
     flexDirection: 'row',
-    marginVertical: 10,
+    marginVertical: 6,
     justifyContent: 'space-around',
   },
   dayButton: {
