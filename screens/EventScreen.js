@@ -231,9 +231,9 @@ const EventScreen = ({ navigation, route }) => {
                           <Text style={styles.downvote}>⬇️</Text>
                         </TouchableOpacity>
                       </View>
-                      <TouchableOpacity onPress={() => removeSlice(slice)} style={styles.removeButton}>
+                      {/* <TouchableOpacity onPress={() => removeSlice(slice)} style={styles.removeButton}>
                         <Text style={styles.removeButtonText}>Remove</Text>
-                      </TouchableOpacity>
+                      </TouchableOpacity> */}
                     </View>
                   </View>
                 );
@@ -420,12 +420,12 @@ const styles = StyleSheet.create({
   upvote: {
     fontSize: 24,
     color: 'green',
-    marginHorizontal: 5,
+    marginHorizontal: 1,
   },
   downvote: {
     fontSize: 24,
     color: 'red',
-    marginHorizontal: 5,
+    marginHorizontal: 1,
   },
   voteCount: {
     fontSize: 18,
