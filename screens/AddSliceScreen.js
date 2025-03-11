@@ -86,14 +86,14 @@ const AddSliceScreen = ({ navigation, route }) => {
           <Text style={styles.title}>Add a New Event</Text>
 
           <TextInput
-            placeholder="Enter slice name"
+            placeholder="Event name"
             value={inputText}
             onChangeText={setInputText}
             style={styles.input}
           />
 
           <TextInput
-            placeholder="Enter description"
+            placeholder="Description"
             value={description}
             onChangeText={setDescription}
             style={styles.input}

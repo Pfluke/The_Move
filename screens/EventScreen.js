@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, Button, Alert, StyleSheet, ScrollView, TouchableOpacity, Image, ImageBackground, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, Text, Button, Alert, StyleSheet, ScrollView, TouchableOpacity, Image, KeyboardAvoidingView, Platform } from 'react-native';
 import { getFirestore, doc, onSnapshot, updateDoc, getDoc, setDoc } from 'firebase/firestore';
 import { app } from '../firebaseConfig';
+import { MaterialIcons } from '@expo/vector-icons'; // For better icons
 
 const db = getFirestore(app);
 
@@ -22,13 +23,12 @@ const EventScreen = ({ navigation, route }) => {
       try {
         if (docSnap.exists()) {
           const data = docSnap.data();
-          //console.log("Fetched slices:", data.slices);  // Log to check data
-          setSlices(data.slices || []);
+          setSlices(data.slices || {});
           setLoadingSlices(false);
         } else {
-          setDoc(groupDocRef, { slices: [] })
+          setDoc(groupDocRef, { slices: {} })
             .then(() => {
-              setSlices([]); 
+              setSlices({});
               setLoadingSlices(false);
             })
             .catch((error) => {
@@ -41,32 +41,9 @@ const EventScreen = ({ navigation, route }) => {
         Alert.alert("Error", error.message);
       }
     });
-  
+
     return () => unsubscribe();
   }, [groupName]);
-
-  const removeSlice = async (sliceName) => {
-    try {
-      const groupSnap = await getDoc(groupDocRef);
-      if (!groupSnap.exists()) {
-        console.error("Group not found");
-        return;
-      }
-
-      const data = groupSnap.data();
-      const currentSlices = data?.slices || {};
-
-      const updatedSlices = { ...currentSlices };
-      delete updatedSlices[sliceName];
-
-      await updateDoc(groupDocRef, {
-        slices: updatedSlices
-      });
-    } catch (error) {
-      console.error("Error removing slice:", error);
-      Alert.alert("Error", error.message);
-    }
-  };
 
   const voteSlice = async (sliceName, voteType) => {
     try {
@@ -74,7 +51,7 @@ const EventScreen = ({ navigation, route }) => {
       if (!groupSnap.exists()) {
         await setDoc(groupDocRef, { slices: {} });
       }
-  
+
       const data = groupSnap.data();
       const sliceData = data?.slices?.[sliceName] || {
         votes: 0,
@@ -83,21 +60,15 @@ const EventScreen = ({ navigation, route }) => {
         description: '',
         startTime: '',
         endTime: '',
-        imageUri: '',  // Make sure imageUri is part of the initial structure
+        imageUri: '',
       };
-  
+
       const currentVotes = sliceData.votes || 0;
       const currentVoters = sliceData.voters || {};
-      const currentDays = sliceData.days || [];
-      const currentDescription = sliceData.description || '';
-      const currentStartTime = sliceData.startTime || '';
-      const currentEndTime = sliceData.endTime || '';
-      const currentImageUri = sliceData.imageUri || ''; // Ensure imageUri is preserved
-  
       const userCurrentVote = currentVoters[username] || 0;
       let newVotes = currentVotes;
       let updatedVoters = { ...currentVoters };
-  
+
       if (userCurrentVote === voteType) {
         newVotes -= voteType;
         delete updatedVoters[username];
@@ -105,33 +76,44 @@ const EventScreen = ({ navigation, route }) => {
         newVotes += voteType - userCurrentVote;
         updatedVoters[username] = voteType;
       }
-  
+
       await updateDoc(groupDocRef, {
         [`slices.${sliceName}`]: {
+          ...sliceData,
           votes: newVotes,
           voters: updatedVoters,
-          days: currentDays,
-          description: currentDescription,
-          startTime: currentStartTime,
-          endTime: currentEndTime,
-          imageUri: currentImageUri, // Ensure imageUri is preserved during the update
         },
       });
-  
+
     } catch (error) {
       console.error("Error updating vote:", error);
       Alert.alert("Error", error.message);
     }
   };
-  
 
   const getUserVote = (sliceName) => {
     const sliceData = slices[sliceName] || {};
     return sliceData.voters ? sliceData.voters[username] : 0;
   };
 
-  // Abbreviated days of the week
   const daysOfWeek = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+
+  // Find the event with the most votes
+  const getEventWithMostVotes = () => {
+    let maxVotes = -1;
+    let eventWithMostVotes = null;
+
+    Object.entries(slices).forEach(([sliceName, sliceData]) => {
+      if (sliceData.votes > maxVotes) {
+        maxVotes = sliceData.votes;
+        eventWithMostVotes = sliceName;
+      }
+    });
+
+    return eventWithMostVotes;
+  };
+
+  const eventWithMostVotes = getEventWithMostVotes();
 
   return (
     <KeyboardAvoidingView
@@ -167,11 +149,7 @@ const EventScreen = ({ navigation, route }) => {
           {daysOfWeek.map((day, index) => (
             <TouchableOpacity
               key={index}
-              onPress={() => navigation.navigate('DayCalendar', { 
-                selectedDay: day, 
-                username, 
-                groupName 
-              })}
+              onPress={() => navigation.navigate('DayCalendar', { selectedDay: day, username, groupName })}
               style={styles.dayButton}
             >
               <Text style={styles.dayButtonText}>{day.substring(0, 3)}</Text>
@@ -179,81 +157,71 @@ const EventScreen = ({ navigation, route }) => {
           ))}
         </View>
 
-        <Button title="Add Event" onPress={() => navigation.navigate('AddSliceScreen', { groupName })} />
-
         <Text style={styles.subtitle}>All Events</Text>
 
         {loadingSlices ? (
           <Text>Loading slices...</Text>
         ) : Object.keys(slices).length === 0 ? (
-          <Text>No slices available yet...</Text>
+          <Text style={styles.noEventsText}>No events scheduled yet. </Text>
         ) : (
-          <ScrollView style={styles.slicesList}>
+          <View style={styles.slicesList}>
             {Object.entries(slices)
-              .sort(([, a], [, b]) => (b.votes || 0) - (a.votes || 0)) // Sort slices by votes in descending order
+              .sort(([, a], [, b]) => (b.votes || 0) - (a.votes || 0))
               .map(([slice, data]) => {
                 const userVote = getUserVote(slice);
                 return (
-                  <View key={slice} style={styles.sliceContainer}>
-                    {/* Check if image URL is available before rendering */}
-                    {data.imageUri ? (
-                      <ImageBackground
-                        source={{ uri: data.imageUri }}  // Handle base64 image
-                        style={styles.imageBackground}
-                        imageStyle={styles.imageStyle}
-                      >
-                        <Text style={styles.sliceText}>{slice}</Text>
-                      </ImageBackground>
-                    ) : (
-                      <Text>No Image Available</Text>
-                    )}
-
-                    <Text style={styles.sliceDescription}>{data.description}</Text>
-                    <Text style={styles.sliceDay}>
-                      {data.days ? data.days.join(', ') : 'No day assigned'}
-                    </Text>
-                    <Text style={styles.sliceTime}>
-                      {data.startTime} - {data.endTime}
-                    </Text>
-                    <View style={styles.voteRemoveContainer}>
+                  <View key={slice} style={styles.cardContainer}>
+                    {/* Card Header with Title, Checkmark, and Voting Buttons */}
+                    <View style={styles.cardHeader}>
+                      <View style={styles.cardTitleContainer}>
+                        <Text style={styles.cardTitle}>{slice}</Text>
+                        {slice === eventWithMostVotes && (
+                          <Text style={styles.checkmark}>✅</Text>
+                        )}
+                      </View>
                       <View style={styles.voteContainer}>
                         <TouchableOpacity
                           onPress={() => voteSlice(slice, 1)}
-                          style={userVote === 1 ? styles.votedUp : styles.voteButton}
+                          style={[styles.voteButton, userVote === 1 && styles.votedUp]}
                         >
-                          <Text style={styles.upvote}>⬆️</Text>
+                          <MaterialIcons name="thumb-up" size={20} color={userVote === 1 ? '#4CAF50' : '#888'} />
                         </TouchableOpacity>
                         <Text style={styles.voteCount}>{data.votes || 0}</Text>
                         <TouchableOpacity
                           onPress={() => voteSlice(slice, -1)}
-                          style={userVote === -1 ? styles.votedDown : styles.voteButton}
+                          style={[styles.voteButton, userVote === -1 && styles.votedDown]}
                         >
-                          <Text style={styles.downvote}>⬇️</Text>
+                          <MaterialIcons name="thumb-down" size={20} color={userVote === -1 ? '#F44336' : '#888'} />
                         </TouchableOpacity>
                       </View>
-                      {/* <TouchableOpacity onPress={() => removeSlice(slice)} style={styles.removeButton}>
-                        <Text style={styles.removeButtonText}>Remove</Text>
-                      </TouchableOpacity> */}
+                    </View>
+
+                    {/* Card Content */}
+                    <View style={styles.cardContent}>
+                      {data.imageUri && (
+                        <Image source={{ uri: data.imageUri }} style={styles.cardImage} />
+                      )}
+                      <Text style={styles.cardDetails}>
+                        {data.days ? data.days.join(', ') : 'No day assigned'} | {data.startTime} - {data.endTime}
+                      </Text>
                     </View>
                   </View>
                 );
               })}
-          </ScrollView>
+          </View>
         )}
 
         {slices && Object.keys(slices).length > 0 && (
           <Button
             title="How About Wheel Decide"
-            onPress={() => navigation.navigate('WheelOfFortune', { 
-              slices: Object.entries(slices).map(([sliceName, sliceData]) => ({ sliceName, sliceData })), 
-              username, 
-              groupName 
-            })}
+            onPress={() => navigation.navigate('WheelOfFortune', { slices: Object.entries(slices).map(([sliceName, sliceData]) => ({ sliceName, sliceData })), username, groupName })}
           />
         )}
-
-        <Button title="Go to Group Screen" onPress={() => navigation.navigate('GroupScreen', { username })} />
       </ScrollView>
+      <View style={styles.bottomButtonContainer}>
+        <Button title="Add Event" onPress={() => navigation.navigate('AddSliceScreen', { groupName })} />
+        <Button title="Go to Group Screen" onPress={() => navigation.navigate('GroupScreen', { username })} />
+      </View>
     </KeyboardAvoidingView>
   );
 };
@@ -265,7 +233,7 @@ const styles = StyleSheet.create({
   },
   scrollContainer: {
     flexGrow: 1,
-    paddingBottom: 150, // add padding to ensure the bottom section doesn't overlap
+    paddingBottom: 150,
   },
   titleContainer: {
     backgroundColor: 'black',
@@ -274,10 +242,7 @@ const styles = StyleSheet.create({
     paddingTop: 50,
   },
   titleTransformContainer: {
-    transform: [
-      { scaleX: 0.9 },
-      { scaleY: 2.8 }
-    ],
+    transform: [{ scaleX: 0.9 }, { scaleY: 2.8 }],
     alignSelf: 'center',
   },
   title: {
@@ -293,14 +258,14 @@ const styles = StyleSheet.create({
     width: '50%',
     backgroundColor: 'white',
     marginTop: 50,
-    alignSelf: 'center'
+    alignSelf: 'center',
   },
   header: {
     fontSize: 18,
     color: 'white',
   },
   headerContainer: {
-    backgroundColor: "#007AFF",
+    backgroundColor: '#007AFF',
     marginLeft: 14,
     marginBottom: 2,
     marginTop: 15,
@@ -312,14 +277,14 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-start',
   },
   textBubbleBig: {
-    backgroundColor: "#007AFF",
+    backgroundColor: '#007AFF',
     borderRadius: 10,
     marginLeft: 10,
     alignSelf: 'flex-start',
     marginTop: 2,
   },
   textBubbleSmall: {
-    backgroundColor: "#007AFF",
+    backgroundColor: '#007AFF',
     borderRadius: 10,
     marginTop: 0,
     marginLeft: 5,
@@ -329,19 +294,25 @@ const styles = StyleSheet.create({
   },
   groupText: {
     fontSize: 45,
-    fontWeight: 'bold', 
+    fontWeight: 'bold',
     color: '#000000',
     textAlign: 'center',
   },
   groupTextContainer: {
     backgroundColor: '#F5F5F5',
-    borderWidth: 0.5, 
-    borderColor: 'black', 
+    borderWidth: 0.5,
+    borderColor: 'black',
     borderRadius: 10,
-    padding: 5, 
-    marginVertical: 10, 
-    alignSelf: 'center', 
-    width: '90%', 
+    padding: 5,
+    marginVertical: 10,
+    alignSelf: 'center',
+    width: '90%',
+  },
+  noEventsText: {
+    fontSize: 16,
+    color: '#888',
+    textAlign: 'center',
+    marginTop: 0,
   },
   dayButtonsContainer: {
     flexDirection: 'row',
@@ -349,9 +320,11 @@ const styles = StyleSheet.create({
     justifyContent: 'space-around',
   },
   dayButton: {
-    padding: 10,
+    padding: 8,
     backgroundColor: 'black',
-    borderRadius: 5,
+    borderRadius: 3,
+    width: 50, // Uniform width for all buttons
+    alignItems: 'center', // Center text horizontally
   },
   dayButtonText: {
     color: 'white',
@@ -364,92 +337,81 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   slicesList: {
-    maxHeight: 300,
     width: '100%',
     padding: 10,
   },
-  sliceContainer: {
+  cardContainer: {
+    backgroundColor: '#FFF',
+    borderRadius: 10,
+    marginBottom: 10,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+    padding: 10,
+  },
+  cardHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    padding: 10,
-    borderBottomWidth: 1,
-    height: 120,  // Adjust height as needed
+    marginBottom: 10,
   },
-  imageBackground: {
-    flex: 1,
-    justifyContent: 'center',
+  cardTitleContainer: {
+    flexDirection: 'row',
     alignItems: 'center',
-    resizeMode: 'cover',  // Stretches the image to cover the container
-    height: 100,  // Adjust the height of the background image
   },
-  imageStyle: {
+  cardTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#000',
+  },
+  checkmark: {
+    marginLeft: 5,
+  },
+  cardContent: {
+    marginBottom: 5,
+  },
+  cardImage: {
+    width: '100%',
+    height: 150,
     borderRadius: 5,
+    marginBottom: 10,
   },
-  sliceText: {
-    fontSize: 20,
-    color: 'white',  // Ensure text is visible over image
-    textShadowColor: 'black',  // Black border color
-    textShadowOffset: { width: 2, height: 2 },  // Shadow offset to create a border effect
-    textShadowRadius: 2,  // Controls the blur of the shadow
-  },
-  sliceDescription: {
-    fontSize: 12,
-    color: 'black',
-    marginLeft: 10,
-  },
-  sliceDay: {
-    fontSize: 12,
-    color: 'black',
-    marginLeft: 10,
-  },
-  sliceTime: {
+  cardDetails: {
     fontSize: 14,
-    color: 'black',
-    marginLeft: 10,
+    color: '#666',
   },
   voteContainer: {
     flexDirection: 'row',
     alignItems: 'center',
   },
-  upvote: {
-    fontSize: 24,
-    color: 'green',
-    marginHorizontal: 1,
-  },
-  downvote: {
-    fontSize: 24,
-    color: 'red',
-    marginHorizontal: 1,
-  },
-  voteCount: {
-    fontSize: 18,
-    color: 'black',
-  },
-  removeButton: {
-    backgroundColor: 'red',
-    padding: 5,
-    borderRadius: 5,
-    marginLeft: 10,
-  },
-  removeButtonText: {
-    color: 'white',
-    fontWeight: 'bold',
-  },
   voteButton: {
-    padding: 3,
-    backgroundColor: '#e0e0e0',
-    borderRadius: 5,
+    padding: 5,
+    borderRadius: 20,
+    marginHorizontal: 5,
   },
   votedUp: {
-    padding: 3,
-    backgroundColor: '#a0e0a0',
-    borderRadius: 5,
+    backgroundColor: '#E8F5E9',
   },
   votedDown: {
-    padding: 3,
-    backgroundColor: '#e0a0a0',
-    borderRadius: 5,
+    backgroundColor: '#FFEBEE',
+  },
+  voteCount: {
+    fontSize: 16,
+    color: '#000',
+    marginHorizontal: 10,
+  },
+  bottomButtonContainer: {
+    position: 'absolute',
+    bottom: 20,
+    left: 0,
+    right: 0,
+    padding: 10,
+    backgroundColor: '#FFFFFF',
+    borderTopWidth: 0,
+    borderTopColor: '#E0E0E0',
   },
 });
 
