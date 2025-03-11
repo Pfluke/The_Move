@@ -44,7 +44,7 @@ const WheelOfFortuneScreen = ({ route }) => {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Wheel of Fortune</Text>
+      <Text style={styles.title}>What Wheel We Do?</Text>
 
       {/* Display the wheel */}
       <View style={styles.wheelContainer}>
