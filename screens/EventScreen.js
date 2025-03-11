@@ -96,7 +96,7 @@ const EventScreen = ({ navigation, route }) => {
     return sliceData.voters ? sliceData.voters[username] : 0;
   };
 
-  const daysOfWeek = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+  const daysOfWeek = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
   // event with most votes
   const getEventWithMostVotes = () => { 
@@ -117,9 +117,9 @@ const EventScreen = ({ navigation, route }) => {
 
   return (
     <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      // behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       style={styles.container}
-      keyboardVerticalOffset={Platform.OS === 'ios' ? 60 : 0}
+      // keyboardVerticalOffset={Platform.OS === 'ios' ? 60 : 0}
     >
       <ScrollView contentContainerStyle={styles.scrollContainer}>
         {/* Title Section */}
@@ -404,10 +404,11 @@ const styles = StyleSheet.create({
   },
   bottomButtonContainer: {
     position: 'absolute',
-    bottom: 20,
+    bottom: 0,
     left: 0,
     right: 0,
     padding: 10,
+    paddingBottom: 25,
     backgroundColor: '#FFFFFF',
     borderTopWidth: 0,
     borderTopColor: '#E0E0E0',
