@@ -181,7 +181,7 @@ const EventScreen = ({ navigation, route }) => {
 
         <Button title="Add Event" onPress={() => navigation.navigate('AddSliceScreen', { groupName })} />
 
-        <Text style={styles.subtitle}>All Slices</Text>
+        <Text style={styles.subtitle}>All Events</Text>
 
         {loadingSlices ? (
           <Text>Loading slices...</Text>
@@ -241,14 +241,14 @@ const EventScreen = ({ navigation, route }) => {
           </ScrollView>
         )}
 
-        <Button
+        {/* <Button
           title="Go to Wheel Screen"
           onPress={() => navigation.navigate('WheelOfFortune', { 
             slices: Object.entries(slices).map(([sliceName, sliceData]) => ({ sliceName, sliceData })), 
             username, 
             groupName 
           })}
-        />
+        /> */}
 
         <Button title="Go to Group Screen" onPress={() => navigation.navigate('GroupScreen', { username })} />
       </ScrollView>
@@ -333,7 +333,7 @@ const styles = StyleSheet.create({
   },
   groupTextContainer: {
     backgroundColor: '#F5F5F5',
-    borderWidth: 0, 
+    borderWidth: 0.5, 
     borderColor: 'black', 
     borderRadius: 10,
     padding: 5, 
@@ -343,7 +343,7 @@ const styles = StyleSheet.create({
   },
   dayButtonsContainer: {
     flexDirection: 'row',
-    marginVertical: 10,
+    marginVertical: 6,
     justifyContent: 'space-around',
   },
   dayButton: {
