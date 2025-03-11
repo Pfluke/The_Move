@@ -22,7 +22,7 @@ const EventScreen = ({ navigation, route }) => {
       try {
         if (docSnap.exists()) {
           const data = docSnap.data();
-          console.log("Fetched slices:", data.slices);  // Log to check data
+          //console.log("Fetched slices:", data.slices);  // Log to check data
           setSlices(data.slices || []);
           setLoadingSlices(false);
         } else {
@@ -131,7 +131,7 @@ const EventScreen = ({ navigation, route }) => {
   };
 
   // Abbreviated days of the week
-  const daysOfWeek = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  const daysOfWeek = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 
   return (
     <KeyboardAvoidingView
@@ -174,7 +174,7 @@ const EventScreen = ({ navigation, route }) => {
               })}
               style={styles.dayButton}
             >
-              <Text style={styles.dayButtonText}>{day}</Text>
+              <Text style={styles.dayButtonText}>{day.substring(0, 3)}</Text>
             </TouchableOpacity>
           ))}
         </View>
