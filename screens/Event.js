@@ -5,7 +5,7 @@ import { app } from '../firebaseConfig'; // Adjust path as needed
 
 const db = getFirestore(app);
 
-const Event = ({ route, navigation }) => {
+const Event = ({ route, navigation }) => {  
   const { groupName, sliceName, username } = route.params; // Get groupName and sliceName from route params
   const [eventData, setEventData] = useState(null);
   const [loading, setLoading] = useState(true);
