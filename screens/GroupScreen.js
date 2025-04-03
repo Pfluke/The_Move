@@ -12,7 +12,10 @@ import {
   Platform,
 } from 'react-native';
 // Firebase imports:
-import { getFirestore, collection, query, where, onSnapshot, doc, updateDoc, arrayUnion, setDoc, arrayRemove, deleteDoc, serverTimestamp } from 'firebase/firestore';
+import { 
+  getFirestore, collection, query, where, onSnapshot, doc, updateDoc, 
+  arrayUnion, setDoc, arrayRemove, deleteDoc, serverTimestamp, getDoc 
+} from 'firebase/firestore';
 import { app } from '../firebaseConfig'; // Adjust the import path as needed
 
 // Initialize Firestore
@@ -23,6 +26,7 @@ const GroupScreen = ({ navigation, route }) => {
   const [message, setMessage] = useState('');
   const [userGroups, setUserGroups] = useState([]); // Array of group objects from Firestore
   const [groupName, setGroupName] = useState('');
+  const [groupPassword, setGroupPassword] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
   const [creators, setCreators] = useState({}); // Mapping from group ID to creator
   const [isKeyboardVisible, setKeyboardVisible] = useState(false); // Track keyboard visibility
@@ -74,25 +78,36 @@ const GroupScreen = ({ navigation, route }) => {
   }, []);
 
   // Firestore write functions:
-  const joinGroupFirestore = async (groupId, user) => {
+  const joinGroupFirestore = async (groupId, user, providedPassword) => {
     try {
       const groupRef = doc(db, "groups", groupId);
+      const groupSnap = await getDoc(groupRef);
+      if (!groupSnap.exists()) {
+        Alert.alert('Error', 'No group under that name.');
+        return;
+      }
+      const groupData = groupSnap.data();
+      if (groupData.password !== providedPassword) {
+        Alert.alert('Error', 'Incorrect group password.');
+        return;
+      }
       await updateDoc(groupRef, {
         members: arrayUnion(user.toLowerCase())
       });
     } catch (error) {
-      Alert.alert('Error', 'This group could not be found. Please try a different group name');
+      Alert.alert('Error', 'An error occurred while joining the group.');
       setErrorMessage(error.message);
     }
   };
 
-  const createGroupFirestore = async (groupId, user) => {
+  const createGroupFirestore = async (groupId, user, password) => {
     try {
       const groupRef = doc(db, "groups", groupId);
       await setDoc(groupRef, {
         creator: user.toLowerCase(),
         members: [user.toLowerCase()],
-        createdAt: serverTimestamp()
+        createdAt: serverTimestamp(),
+        password: password
       });
     } catch (error) {
       console.error("Error creating group: ", error);
@@ -123,20 +138,22 @@ const GroupScreen = ({ navigation, route }) => {
   };
 
   const joinGroup = () => {
-    if (groupName.trim()) {
-      joinGroupFirestore(groupName, username);
+    if (groupName.trim() && groupPassword.trim()) {
+      joinGroupFirestore(groupName, username, groupPassword);
       setGroupName('');
+      setGroupPassword('');
     } else {
-      Alert.alert('Error', 'Please enter a valid group name');
+      Alert.alert('Error', 'Please enter a valid group name and password');
     }
   };
 
   const createGroup = () => {
-    if (groupName.trim()) {
-      createGroupFirestore(groupName, username);
+    if (groupName.trim() && groupPassword.trim()) {
+      createGroupFirestore(groupName, username, groupPassword);
       setGroupName('');
+      setGroupPassword('');
     } else {
-      Alert.alert('Error', 'Please enter a valid group name');
+      Alert.alert('Error', 'Please enter a valid group name and password');
     }
   };
 
@@ -238,6 +255,14 @@ const GroupScreen = ({ navigation, route }) => {
           value={groupName}
           onChangeText={setGroupName}
         />
+        <TextInput
+          style={styles.input}
+          placeholder="ENTER GROUP PASSWORD"
+          placeholderTextColor="#888"
+          value={groupPassword}
+          onChangeText={setGroupPassword}
+          secureTextEntry={true}
+        />
         <TouchableOpacity style={styles.button} onPress={joinGroup}>
           <Text style={styles.buttonText}>JOIN GROUP</Text>
         </TouchableOpacity>
@@ -263,7 +288,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'black',
     flexDirection: 'column',
     width: '100%',
-    paddingTop: 50.
+    paddingTop: 50,
   },
   titleTransformContainer: {
     transform: [
@@ -313,7 +338,6 @@ const styles = StyleSheet.create({
   textBubbleSmall: {
     backgroundColor: "#007AFF",
     borderRadius: 10,
-    marginTop: 0,
     marginLeft: 5,
     marginBottom: 10,
     alignSelf: 'flex-start',
@@ -432,3 +456,5 @@ const styles = StyleSheet.create({
 });
 
 export default GroupScreen;
+
+
