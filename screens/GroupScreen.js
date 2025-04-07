@@ -1,15 +1,17 @@
 import React, { useEffect, useState } from 'react';
-import {
-  View,
-  Text,
-  TextInput,
-  Alert,
-  StyleSheet,
-  ScrollView,
-  TouchableOpacity,
-  Keyboard,
-  KeyboardAvoidingView,
+import { 
+  View, 
+  Text, 
+  TextInput, 
+  Alert, 
+  StyleSheet, 
+  ScrollView, 
+  TouchableOpacity, 
+  Keyboard, 
+  KeyboardAvoidingView, 
   Platform,
+  SafeAreaView,
+  StatusBar
 } from 'react-native';
 // Firebase imports:
 import { 
@@ -179,99 +181,105 @@ const GroupScreen = ({ navigation, route }) => {
   };
 
   return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'} // adjust behavior based on platform
-      style={styles.container}
-      keyboardVerticalOffset={Platform.OS === 'ios' ? 60 : 0} // adjust offset if needed
-    >
-      {/* Scrollable Content */}
-      <ScrollView
-        contentContainerStyle={styles.scrollContainer}
-        keyboardShouldPersistTaps="handled" // allow taps to dismiss the keyboard
-      >
-        {/* Title Section */}
-        <View style={styles.titleContainer}>
-          <View style={styles.titleTransformContainer}>
-            <Text style={styles.title}>THE MOVE</Text>
-          </View>
-          <View style={styles.titleUnderline} />
-          <View style={styles.headerContainer}>
-            <Text style={styles.header}>What are we doing later?</Text>
-          </View>
-          <View style={styles.textBubbleBig}>
-            <Text style={{ fontSize: 9 }}>       </Text>
-          </View>
-          <View style={styles.textBubbleSmall}>
-            <Text style={{ fontSize: 6 }}>    </Text>
-          </View>
-        </View>
-
-        {/* Error Message */}
-        {errorMessage && <Text style={styles.errorText}>{errorMessage}</Text>}
-
-        {/* Group List */}
-        <View style={styles.groupsList}>
-          {userGroups.length > 0 ? (
-            userGroups.map((group) => (
-              <View key={group.id} style={styles.groupCard}>
-                <Text style={styles.groupName}>Group: {group.id}</Text>
-                <Text style={styles.creatorText}>Creator: {creators[group.id] || 'No creator found'}</Text>
-                <View style={styles.buttonContainer}>
-                  <TouchableOpacity
-                    style={styles.actionButton}
-                    onPress={() => navigation.navigate('EventScreen', { username, groupName: group.id })}
-                  >
-                    <Text style={styles.actionButtonText}>Go to {group.id}</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={styles.leaveButton}
-                    onPress={() => leaveGroup(group.id)}
-                  >
-                    <Text style={styles.leaveButtonText}>Leave Group</Text>
-                  </TouchableOpacity>
-                </View>
-                {creators[group.id] === username.toLowerCase() && (
-                  <TouchableOpacity
-                    style={styles.deleteButton}
-                    onPress={() => handleDeleteGroup(group.id)}
-                  >
-                    <Text style={styles.deleteButtonText}>Delete Group</Text>
-                  </TouchableOpacity>
-                )}
+    <View style={{ flex: 1 }}>
+      <StatusBar barStyle="light-content" />
+      <SafeAreaView style={{ flex: 0, backgroundColor: 'black' }} />
+      <SafeAreaView style={{ flex: 1, backgroundColor: '#FFFFFF' }}>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          style={styles.container}
+          keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
+        >
+          {/* Scrollable Content */}
+          <ScrollView
+            contentContainerStyle={styles.scrollContainer}
+            keyboardShouldPersistTaps="handled"
+          >
+            {/* Title Section */}
+            <View style={styles.titleContainer}>
+              <View style={styles.titleTransformContainer}>
+                <Text style={styles.title}>THE MOVE</Text>
               </View>
-            ))
-          ) : (
-            <Text style={styles.noGroupsText}>No groups found. Create or join a group!</Text>
-          )}
-        </View>
-      </ScrollView>
+              <View style={styles.titleUnderline} />
+              <View style={styles.headerContainer}>
+                <Text style={styles.header}>What are we doing later?</Text>
+              </View>
+              <View style={styles.textBubbleBig}>
+                <Text style={{ fontSize: 9 }}>       </Text>
+              </View>
+              <View style={styles.textBubbleSmall}>
+                <Text style={{ fontSize: 6 }}>    </Text>
+              </View>
+            </View>
 
-      {/* Fixed Bottom Section */}
-      <View style={[styles.bottomContainer, { bottom: isKeyboardVisible ? 325 : 0 }]}>
-        <TextInput
-          style={styles.input}
-          placeholder="ENTER GROUP NAME"
-          placeholderTextColor="#888"
-          value={groupName}
-          onChangeText={setGroupName}
-        />
-        <TextInput
-          style={styles.input}
-          placeholder="ENTER GROUP PASSWORD"
-          placeholderTextColor="#888"
-          value={groupPassword}
-          onChangeText={setGroupPassword}
-          secureTextEntry={true}
-        />
-        <TouchableOpacity style={styles.button} onPress={joinGroup}>
-          <Text style={styles.buttonText}>JOIN GROUP</Text>
-        </TouchableOpacity>
-        <View style={styles.buttonSpacer} />
-        <TouchableOpacity style={styles.button} onPress={createGroup}>
-          <Text style={styles.buttonText}>CREATE GROUP</Text>
-        </TouchableOpacity>
-      </View>
-    </KeyboardAvoidingView>
+            {/* Error Message */}
+            {errorMessage && <Text style={styles.errorText}>{errorMessage}</Text>}
+
+            {/* Group List */}
+            <View style={styles.groupsList}>
+              {userGroups.length > 0 ? (
+                userGroups.map((group) => (
+                  <View key={group.id} style={styles.groupCard}>
+                    <Text style={styles.groupName}>Group: {group.id}</Text>
+                    <Text style={styles.creatorText}>Creator: {creators[group.id] || 'No creator found'}</Text>
+                    <View style={styles.buttonContainer}>
+                      <TouchableOpacity
+                        style={styles.actionButton}
+                        onPress={() => navigation.navigate('EventScreen', { username, groupName: group.id })}
+                      >
+                        <Text style={styles.actionButtonText}>Go to {group.id}</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        style={styles.leaveButton}
+                        onPress={() => leaveGroup(group.id)}
+                      >
+                        <Text style={styles.leaveButtonText}>Leave Group</Text>
+                      </TouchableOpacity>
+                    </View>
+                    {creators[group.id] === username.toLowerCase() && (
+                      <TouchableOpacity
+                        style={styles.deleteButton}
+                        onPress={() => handleDeleteGroup(group.id)}
+                      >
+                        <Text style={styles.deleteButtonText}>Delete Group</Text>
+                      </TouchableOpacity>
+                    )}
+                  </View>
+                ))
+              ) : (
+                <Text style={styles.noGroupsText}>No groups found. Create or join a group!</Text>
+              )}
+            </View>
+          </ScrollView>
+
+          {/* Fixed Bottom Section */}
+          <View style={[styles.bottomContainer, { bottom: isKeyboardVisible ? 325 : 0 }]}>
+            <TextInput
+              style={styles.input}
+              placeholder="ENTER GROUP NAME"
+              placeholderTextColor="#888"
+              value={groupName}
+              onChangeText={setGroupName}
+            />
+            <TextInput
+              style={styles.input}
+              placeholder="ENTER GROUP PASSWORD"
+              placeholderTextColor="#888"
+              value={groupPassword}
+              onChangeText={setGroupPassword}
+              secureTextEntry={true}
+            />
+            <TouchableOpacity style={styles.button} onPress={joinGroup}>
+              <Text style={styles.buttonText}>JOIN GROUP</Text>
+            </TouchableOpacity>
+            <View style={styles.buttonSpacer} />
+            <TouchableOpacity style={styles.button} onPress={createGroup}>
+              <Text style={styles.buttonText}>CREATE GROUP</Text>
+            </TouchableOpacity>
+          </View>
+        </KeyboardAvoidingView>
+      </SafeAreaView>
+    </View>
   );
 };
 
@@ -288,30 +296,30 @@ const styles = StyleSheet.create({
     backgroundColor: 'black',
     flexDirection: 'column',
     width: '100%',
-    paddingTop: 50,
+    paddingTop: 5,
   },
-  titleTransformContainer: {
-    transform: [
-      { scaleX: 0.9 },
-      { scaleY: 2.8 }
-    ],
-    alignSelf: 'center',
-  },
-  title: {
-    fontSize: 55,
-    marginTop: 20,
-    fontWeight: 'bold',
-    color: 'white',
-    textAlign: 'center',
-    width: '100%',
-  },
-  titleUnderline: {
-    height: 5,
-    width: '50%',
-    backgroundColor: 'white',
-    marginTop: 50,
-    alignSelf: 'center'
-  },
+  // titleTransformContainer: {
+  //   transform: [
+  //     { scaleX: 0.9 },
+  //     { scaleY: 2.8 }
+  //   ],
+  //   alignSelf: 'center',
+  // },
+  // title: {
+  //   fontSize: 55,
+  //   marginTop: 20,
+  //   fontWeight: 'bold',
+  //   color: 'white',
+  //   textAlign: 'center',
+  //   width: '100%',
+  // },
+  // titleUnderline: {
+  //   height: 5,
+  //   width: '50%',
+  //   backgroundColor: 'white',
+  //   marginTop: 50,
+  //   alignSelf: 'center'
+  // },
   header: {
     fontSize: 18,
     color: 'white',
@@ -456,5 +464,3 @@ const styles = StyleSheet.create({
 });
 
 export default GroupScreen;
-
-
