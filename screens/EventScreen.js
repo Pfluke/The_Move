@@ -123,93 +123,85 @@ const EventScreen = ({ navigation, route }) => {
           style={styles.container}
           keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
         >
-          <ScrollView contentContainerStyle={styles.scrollContainer}>
-            {/* <View style={styles.headerContainer}>
-              <Text style={styles.header}>What are we doing later?</Text>
-            </View>
-            <View style={styles.textBubbleBig}>
-              <Text style={{ fontSize: 8 }}>       </Text>
-            </View>
-            <View style={styles.textBubbleSmall}>
-              <Text style={{ fontSize: 6 }}>    </Text>
-            </View> */}
   
-            {/* Group Name */}
-            <View style={styles.groupTextContainer}>
-              <Text style={styles.groupText}>{groupName}</Text>
-            </View>
-  
-            {/* Day Buttons */}
-            <View style={styles.dayButtonsContainer}>
-              {daysOfWeek.map((day, index) => (
-                <TouchableOpacity
-                  key={index}
-                  onPress={() => navigation.navigate('DayCalendar', { selectedDay: day, username, groupName })}
-                  style={styles.dayButton}
-                >
-                  <Text style={styles.dayButtonText}>{day.substring(0, 3)}</Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-  
-            <Text style={styles.subtitle}>All Events</Text>
-  
-            {loadingSlices ? (
-              <Text>Loading slices...</Text>
-            ) : Object.keys(slices).length === 0 ? (
-              <Text style={styles.noEventsText}>No events scheduled yet. </Text>
-            ) : (
-              <View style={styles.slicesList}>
-                {Object.entries(slices)
-                  .sort(([, a], [, b]) => (b.votes || 0) - (a.votes || 0))
-                  .map(([slice, data]) => {
-                    const userVote = getUserVote(slice);
-                    return (
-                      <View key={slice} style={styles.cardContainer}>
-                        {/* Card Header with Title, Checkmark, and Voting Buttons */}
-                        <View style={styles.cardHeader}>
-                          <View style={styles.cardTitleContainer}>
-                            <Text style={styles.cardTitle}>{slice}</Text>
-                            {slice === eventWithMostVotes && (
-                              <Text style={styles.checkmark}>✅</Text>
-                            )}
-                          </View>
-                          <View style={styles.voteContainer}>
-                            <TouchableOpacity
-                              onPress={() => voteSlice(slice, 1)}
-                              style={[styles.voteButton, userVote === 1 && styles.votedUp]}
-                            >
-                              <MaterialIcons name="thumb-up" size={20} color={userVote === 1 ? '#4CAF50' : '#888'} />
-                            </TouchableOpacity>
-                            <Text style={styles.voteCount}>{data.votes || 0}</Text>
-                            <TouchableOpacity
-                              onPress={() => voteSlice(slice, -1)}
-                              style={[styles.voteButton, userVote === -1 && styles.votedDown]}
-                            >
-                              <MaterialIcons name="thumb-down" size={20} color={userVote === -1 ? '#F44336' : '#888'} />
-                            </TouchableOpacity>
-                          </View>
-                        </View>
-  
-                        {/* Card Content */}
-                        <View style={styles.cardContent}>
-                          {data.imageUri && (
-                            <Image source={{ uri: data.imageUri }} style={styles.cardImage} />
-                          )}
-                          <Text style={styles.cardDetails}>
-                            {data.days ? data.days.join(', ') : 'No day assigned'} | {data.startTime} - {data.endTime}
-                          </Text>
-                        </View>
-                      </View>
-                    );
-                  })}
-              </View>
-            )}
-          </ScrollView>
-          <View style={styles.bottomButtonContainer}>
-            <Button title="Add Event" onPress={() => navigation.navigate('AddSliceScreen', { groupName })} />
-            <Button title="Go to Group Screen" onPress={() => navigation.navigate('GroupScreen', { username })} />
+        {/* Group Name */}
+        <View style={styles.groupTextContainer}>
+          <Text style={styles.groupText}>{groupName}</Text>
+        </View>
+
+        {/* Day Buttons */}
+        <View style={styles.dayButtonsContainer}>
+          {daysOfWeek.map((day, index) => (
+            <TouchableOpacity
+              key={index}
+              onPress={() => navigation.navigate('DayCalendar', { selectedDay: day, username, groupName })}
+              style={styles.dayButton}
+            >
+              <Text style={styles.dayButtonText}>{day}</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+
+        <View style={styles.weekEventsContainer}>
+          {/* Button to view top events of the week */}
+          <TouchableOpacity 
+            style={styles.weekEventsButton}
+            onPress={() =>
+              navigation.navigate('EventsOfWeek', {
+                username,
+                groupName,
+                initialEventData: slices,
+              })
+            }
+          >
+            <Text style={styles.customButtonText}>
+              View Top Events Of The Week
+            </Text>
+          </TouchableOpacity>
+        </View>
+        
+        <View style={styles.bottomButtonContainer}>
+
+          {/* Go to Group Screen Button */}
+          <View style={styles.buttonContainer}>
+            <TouchableOpacity
+              style={styles.customButton}
+              onPress={() => 
+                navigation.navigate('GroupScreen', { username }
+              )}
+            >
+              <MaterialIcons 
+                name="arrow-back"
+                size={60}
+                color="black"
+                alignSelf='center'
+              />
+              <Text style={styles.customButtonText}>
+                Go To Group Screen
+              </Text>
+            </TouchableOpacity>
           </View>
+
+          {/* Add Event Button */}
+          <View style={styles.buttonContainer}>
+            <TouchableOpacity
+              style={styles.customButton}
+              onPress={() => 
+                navigation.navigate('AddSliceScreen', { groupName }
+              )}
+            >
+              <MaterialIcons
+                name="add"
+                size={60}
+                color="black"
+                alignSelf='center'
+              />
+              <Text style={styles.customButtonText}>
+                Add Event
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </View>
         </KeyboardAvoidingView>
     </SafeAreaView>
   );
@@ -220,36 +212,6 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#FFFFFF',
   },
-  scrollContainer: {
-    flexGrow: 1,
-    paddingBottom: 150,
-  },
-  titleContainer: {
-    backgroundColor: 'black',
-    flexDirection: 'column',
-    width: '100%',
-    // paddingTop: 5,
-  },
-  // get rid of top title text
-  // titleTransformContainer: { 
-  //   transform: [{ scaleX: 0.9 }, { scaleY: 2.8 }],
-  //   alignSelf: 'center',
-  // },
-  // title: {
-  //   fontSize: 55,
-  //   marginTop: 20,
-  //   fontWeight: 'bold',
-  //   color: 'white',
-  //   textAlign: 'center',
-  //   width: '100%',
-  // },
-  // titleUnderline: {
-  //   height: 5,
-  //   width: '50%',
-  //   backgroundColor: 'white',
-  //   marginTop: 50,
-  //   alignSelf: 'center',
-  // },
   header: { // bubble text style
     fontSize: 18,
     color: 'white',
@@ -302,107 +264,97 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#888',
     textAlign: 'center',
-    marginTop: 0,
+  },
+  weekEventsContainer:{
+    justifyContent: 'space-around',
+    backgroundColor: '#FFFFFF',
+    justifyContent: 'center',
+    alignSelf: 'center',
+    width: '83%',
+  },
+  weekEventsButton: {
+    backgroundColor: 'transparent',
+    borderRadius: 5,
+    borderWidth: 3,
+    height: 60,
+    justifyContent: 'center',
+    alignItems: 'center'
   },
   dayButtonsContainer: {
-    flexDirection: 'row',
+    flexDirection: 'column',
     marginVertical: 6,
-    justifyContent: 'space-around',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   dayButton: {
-    padding: 8,
+    padding: 13,
     backgroundColor: 'black',
-    borderRadius: 3,
-    width: 50, 
-    alignItems: 'center', 
+    borderRadius: 8,
+    width: '93%', 
+    alignItems: 'center',
+    marginVertical: 5,
   },
   dayButtonText: {
     color: 'white',
-    fontSize: 16,
-  },
-  subtitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    marginVertical: 10,
-    textAlign: 'center',
-  },
-  slicesList: {
-    width: '100%',
-    padding: 10,
-  },
-  cardContainer: {
-    backgroundColor: '#FFF',
-    borderRadius: 10,
-    marginBottom: 10,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-    padding: 10,
-  },
-  cardHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 10,
-  },
-  cardTitleContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  cardTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#000',
-  },
-  checkmark: {
-    marginLeft: 5,
-  },
-  cardContent: {
-    marginBottom: 5,
-  },
-  cardImage: {
-    width: '100%',
-    height: 150,
-    borderRadius: 5,
-    marginBottom: 10,
-  },
-  cardDetails: {
-    fontSize: 14,
-    color: '#666',
-  },
-  voteContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  voteButton: {
-    padding: 5,
-    borderRadius: 20,
-    marginHorizontal: 5,
-  },
-  votedUp: {
-    backgroundColor: '#E8F5E9',
-  },
-  votedDown: {
-    backgroundColor: '#FFEBEE',
-  },
-  voteCount: {
-    fontSize: 16,
-    color: '#000',
-    marginHorizontal: 10,
+    fontSize: 24,
   },
   bottomButtonContainer: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    padding: 5,
-    // paddingBottom: 15,
+    flexDirection: "row",
+    justifyContent: 'space-around',
+    padding: 10,
     backgroundColor: '#FFFFFF',
-    borderTopWidth: 0,
-    borderTopColor: '#E0E0E0',
   },
+  buttonContainer: {
+    alignItems: 'center',
+    width: '45%',
+  },
+  customButton: {
+    marginTop: 6,
+    backgroundColor: 'transparent',
+    paddingVertical: 0,
+    paddingHorizontal: 5,
+    borderRadius: 5,
+    borderWidth: 3,
+    height: 120,
+    width: 140,
+    justifyContent: 'center',
+  },
+  customButtonText: {
+    color: 'black',
+    fontSize: 20,
+    fontWeight: 'bold',
+    textAlign: 'center',
+  },
+
+
+  //FOREHEAD STYLING:
+
+  // titleContainer: {
+  //   backgroundColor: 'black',
+  //   flexDirection: 'column',
+  //   width: '100%',
+  //   paddingTop: 5,
+  // },
+  // get rid of top title text
+  // titleTransformContainer: { 
+  //   transform: [{ scaleX: 0.9 }, { scaleY: 2.8 }],
+  //   alignSelf: 'center',
+  // },
+  // title: {
+  //   fontSize: 55,
+  //   marginTop: 20,
+  //   fontWeight: 'bold',
+  //   color: 'white',
+  //   textAlign: 'center',
+  //   width: '100%',
+  // },
+  // titleUnderline: {
+  //   height: 5,
+  //   width: '50%',
+  //   backgroundColor: 'white',
+  //   marginTop: 50,
+  //   alignSelf: 'center',
+  // },
 });
 
 export default EventScreen;
