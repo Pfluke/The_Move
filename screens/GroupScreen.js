@@ -96,7 +96,6 @@ const GroupScreen = ({ navigation, route }) => {
     }
   };
 
-
   const GroupContextMenu = ({ groupId, isCreator, onLeave, onEdit, onDelete }) => {
     const [isMenuVisible, setIsMenuVisible] = useState(false);
   
