@@ -11,7 +11,8 @@ import {
   KeyboardAvoidingView, 
   Platform,
   SafeAreaView,
-  StatusBar
+  StatusBar,
+  Modal
 } from 'react-native';
 // Firebase imports:
 import { 
@@ -32,6 +33,10 @@ const GroupScreen = ({ navigation, route }) => {
   const [errorMessage, setErrorMessage] = useState('');
   const [creators, setCreators] = useState({}); // Mapping from group ID to creator
   const [isKeyboardVisible, setKeyboardVisible] = useState(false); // Track keyboard visibility
+
+  // Modal visibility states:
+  const [showJoinModal, setShowJoinModal] = useState(false);
+  const [showCreateModal, setShowCreateModal] = useState(false);
 
   // Fetch groups from Firestore, members are users
   useEffect(() => {
@@ -62,14 +67,14 @@ const GroupScreen = ({ navigation, route }) => {
     const keyboardDidShowListener = Keyboard.addListener(
       Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow',
       () => {
-        setKeyboardVisible(true); // Set keyboard visibility to true
+        setKeyboardVisible(true);
       }
     );
 
     const keyboardDidHideListener = Keyboard.addListener(
       Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide',
       () => {
-        setKeyboardVisible(false); // Set keyboard visibility to false
+        setKeyboardVisible(false);
       }
     );
 
@@ -139,24 +144,40 @@ const GroupScreen = ({ navigation, route }) => {
     }
   };
 
-  const joinGroup = () => {
+  // Modal submit handlers:
+  const onJoinModalSubmit = () => {
     if (groupName.trim() && groupPassword.trim()) {
       joinGroupFirestore(groupName, username, groupPassword);
       setGroupName('');
       setGroupPassword('');
+      setShowJoinModal(false);
     } else {
       Alert.alert('Error', 'Please enter a valid group name and password');
     }
   };
 
-  const createGroup = () => {
+  const onCreateModalSubmit = () => {
     if (groupName.trim() && groupPassword.trim()) {
       createGroupFirestore(groupName, username, groupPassword);
       setGroupName('');
       setGroupPassword('');
+      setShowCreateModal(false);
     } else {
       Alert.alert('Error', 'Please enter a valid group name and password');
     }
+  };
+
+  // Open modal functions:
+  const openJoinModal = () => {
+    setGroupName('');
+    setGroupPassword('');
+    setShowJoinModal(true);
+  };
+
+  const openCreateModal = () => {
+    setGroupName('');
+    setGroupPassword('');
+    setShowCreateModal(true);
   };
 
   const leaveGroup = (groupId) => {
@@ -197,10 +218,6 @@ const GroupScreen = ({ navigation, route }) => {
           >
             {/* Title Section */}
             <View style={styles.titleContainer}>
-              <View style={styles.titleTransformContainer}>
-                <Text style={styles.title}>THE MOVE</Text>
-              </View>
-              <View style={styles.titleUnderline} />
               <View style={styles.headerContainer}>
                 <Text style={styles.header}>What are we doing later?</Text>
               </View>
@@ -252,31 +269,97 @@ const GroupScreen = ({ navigation, route }) => {
             </View>
           </ScrollView>
 
-          {/* Fixed Bottom Section */}
+          {/* Fixed Bottom Section with only buttons */}
           <View style={[styles.bottomContainer, { bottom: isKeyboardVisible ? 325 : 0 }]}>
-            <TextInput
-              style={styles.input}
-              placeholder="ENTER GROUP NAME"
-              placeholderTextColor="#888"
-              value={groupName}
-              onChangeText={setGroupName}
-            />
-            <TextInput
-              style={styles.input}
-              placeholder="ENTER GROUP PASSWORD"
-              placeholderTextColor="#888"
-              value={groupPassword}
-              onChangeText={setGroupPassword}
-              secureTextEntry={true}
-            />
-            <TouchableOpacity style={styles.button} onPress={joinGroup}>
+            <TouchableOpacity style={styles.button} onPress={openJoinModal}>
               <Text style={styles.buttonText}>JOIN GROUP</Text>
             </TouchableOpacity>
             <View style={styles.buttonSpacer} />
-            <TouchableOpacity style={styles.button} onPress={createGroup}>
+            <TouchableOpacity style={styles.button} onPress={openCreateModal}>
               <Text style={styles.buttonText}>CREATE GROUP</Text>
             </TouchableOpacity>
           </View>
+
+          {/* Join Group Modal */}
+          {showJoinModal && (
+            <Modal
+              transparent={true}
+              animationType="slide"
+              visible={showJoinModal}
+              onRequestClose={() => setShowJoinModal(false)}
+            >
+              <View style={styles.modalBackground}>
+                <View style={styles.modalContainer}>
+                  <Text style={styles.modalTitle}>Join Group</Text>
+                  <TextInput
+                    style={styles.input}
+                    placeholder="Enter Group Name"
+                    placeholderTextColor="#888"
+                    value={groupName}
+                    onChangeText={setGroupName}
+                  />
+                  <TextInput
+                    style={styles.input}
+                    placeholder="Enter Group Password"
+                    placeholderTextColor="#888"
+                    value={groupPassword}
+                    onChangeText={setGroupPassword}
+                    secureTextEntry={true}
+                  />
+                  <TouchableOpacity style={styles.button} onPress={onJoinModalSubmit}>
+                    <Text style={styles.buttonText}>JOIN GROUP</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity 
+                    style={[styles.button, { marginTop: 10, backgroundColor: '#aaa' }]} 
+                    onPress={() => setShowJoinModal(false)}
+                  >
+                    <Text style={styles.buttonText}>Cancel</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </Modal>
+          )}
+
+          {/* Create Group Modal */}
+          {showCreateModal && (
+            <Modal
+              transparent={true}
+              animationType="slide"
+              visible={showCreateModal}
+              onRequestClose={() => setShowCreateModal(false)}
+            >
+              <View style={styles.modalBackground}>
+                <View style={styles.modalContainer}>
+                  <Text style={styles.modalTitle}>Create Group</Text>
+                  <TextInput
+                    style={styles.input}
+                    placeholder="Enter Group Name"
+                    placeholderTextColor="#888"
+                    value={groupName}
+                    onChangeText={setGroupName}
+                  />
+                  <TextInput
+                    style={styles.input}
+                    placeholder="Enter Group Password"
+                    placeholderTextColor="#888"
+                    value={groupPassword}
+                    onChangeText={setGroupPassword}
+                    secureTextEntry={true}
+                  />
+                  <TouchableOpacity style={styles.button} onPress={onCreateModalSubmit}>
+                    <Text style={styles.buttonText}>CREATE GROUP</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity 
+                    style={[styles.button, { marginTop: 10, backgroundColor: '#aaa' }]} 
+                    onPress={() => setShowCreateModal(false)}
+                  >
+                    <Text style={styles.buttonText}>Cancel</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </Modal>
+          )}
+
         </KeyboardAvoidingView>
       </SafeAreaView>
     </View>
@@ -290,7 +373,7 @@ const styles = StyleSheet.create({
   },
   scrollContainer: {
     flexGrow: 1,
-    paddingBottom: 150, // add padding to ensure the bottom section doesn't overlap
+    paddingBottom: 150,
   },
   titleContainer: {
     backgroundColor: 'black',
@@ -298,32 +381,29 @@ const styles = StyleSheet.create({
     width: '100%',
     paddingTop: 5,
   },
-  // titleTransformContainer: {
-  //   transform: [
-  //     { scaleX: 0.9 },
-  //     { scaleY: 2.8 }
-  //   ],
-  //   alignSelf: 'center',
-  // },
-  // title: {
-  //   fontSize: 55,
-  //   marginTop: 20,
-  //   fontWeight: 'bold',
-  //   color: 'white',
-  //   textAlign: 'center',
-  //   width: '100%',
-  // },
-  // titleUnderline: {
-  //   height: 5,
-  //   width: '50%',
-  //   backgroundColor: 'white',
-  //   marginTop: 50,
-  //   alignSelf: 'center'
-  // },
+  titleTransformContainer: {
+    alignSelf: 'center',
+  },
+  title: {
+    fontSize: 55,
+    marginTop: 20,
+    fontWeight: 'bold',
+    color: 'white',
+    textAlign: 'center',
+    width: '100%',
+  },
+  titleUnderline: {
+    height: 5,
+    width: '50%',
+    backgroundColor: 'white',
+    marginTop: 50,
+    alignSelf: 'center'
+  },
   header: {
     fontSize: 18,
     color: 'white',
   },
+  // Updated headerContainer: added larger black border
   headerContainer: {
     backgroundColor: "#007AFF",
     marginLeft: 14,
@@ -335,6 +415,8 @@ const styles = StyleSheet.create({
     paddingRight: 8,
     borderRadius: 20,
     alignSelf: 'flex-start',
+    borderWidth: 3,
+    borderColor: 'black',
   },
   textBubbleBig: {
     backgroundColor: "#007AFF",
@@ -461,6 +543,26 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
   },
+  modalBackground: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0,0,0,0.5)',
+  },
+  modalContainer: {
+    width: '80%',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 10,
+    padding: 20,
+    elevation: 5,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    marginBottom: 10,
+    textAlign: 'center',
+  },
 });
 
 export default GroupScreen;
+
