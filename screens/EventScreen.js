@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, Button, Alert, StyleSheet, ScrollView, TouchableOpacity, Image, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, Text, Button, Alert, StyleSheet, ScrollView, TouchableOpacity, Image, KeyboardAvoidingView, Platform, SafeAreaView ,StatusBar } from 'react-native';
 import { getFirestore, doc, onSnapshot, updateDoc, getDoc, setDoc } from 'firebase/firestore';
 import { app } from '../firebaseConfig';
-import { MaterialIcons } from '@expo/vector-icons'; // better icons
+import { MaterialIcons } from '@expo/vector-icons';
 
 const db = getFirestore(app);
 
@@ -98,7 +98,6 @@ const EventScreen = ({ navigation, route }) => {
 
   const daysOfWeek = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
-  // event with most votes
   const getEventWithMostVotes = () => { 
     let maxVotes = -1;
     let eventWithMostVotes = null;
@@ -116,113 +115,103 @@ const EventScreen = ({ navigation, route }) => {
   const eventWithMostVotes = getEventWithMostVotes();
 
   return (
-    <KeyboardAvoidingView
-      // behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      style={styles.container}
-      // keyboardVerticalOffset={Platform.OS === 'ios' ? 60 : 0}
-    >
-      <ScrollView contentContainerStyle={styles.scrollContainer}>
-        {/* Title Section */}
-        <View style={styles.titleContainer}>
-          <View style={styles.titleTransformContainer}>
-            <Text style={styles.title}>THE MOVE</Text>
-          </View>
-          <View style={styles.titleUnderline} />
-          <View style={styles.headerContainer}>
-            <Text style={styles.header}>What are we doing later?</Text>
-          </View>
-          <View style={styles.textBubbleBig}>
-            <Text style={{ fontSize: 8 }}>       </Text>
-          </View>
-          <View style={styles.textBubbleSmall}>
-            <Text style={{ fontSize: 6 }}>    </Text>
-          </View>
-        </View>
-
-        {/* Group Name */}
-        <View style={styles.groupTextContainer}>
-          <Text style={styles.groupText}>{groupName}</Text>
-        </View>
-
-        {/* Day Buttons */}
-        <View style={styles.dayButtonsContainer}>
-          {daysOfWeek.map((day, index) => (
-            <TouchableOpacity
-              key={index}
-              onPress={() => navigation.navigate('DayCalendar', { selectedDay: day, username, groupName })}
-              style={styles.dayButton}
-            >
-              <Text style={styles.dayButtonText}>{day.substring(0, 3)}</Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-
-        <Text style={styles.subtitle}>All Events</Text>
-
-        {loadingSlices ? (
-          <Text>Loading slices...</Text>
-        ) : Object.keys(slices).length === 0 ? (
-          <Text style={styles.noEventsText}>No events scheduled yet. </Text>
-        ) : (
-          <View style={styles.slicesList}>
-            {Object.entries(slices)
-              .sort(([, a], [, b]) => (b.votes || 0) - (a.votes || 0))
-              .map(([slice, data]) => {
-                const userVote = getUserVote(slice);
-                return (
-                  <View key={slice} style={styles.cardContainer}>
-                    {/* Card Header with Title, Checkmark, and Voting Buttons */}
-                    <View style={styles.cardHeader}>
-                      <View style={styles.cardTitleContainer}>
-                        <Text style={styles.cardTitle}>{slice}</Text>
-                        {slice === eventWithMostVotes && (
-                          <Text style={styles.checkmark}>✅</Text>
-                        )}
+    <SafeAreaView style={{ flex: 1, backgroundColor:"white" }}>
+      <StatusBar barStyle="dark-content" />
+      {/* black safe background for ios white text at top */}
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          style={styles.container}
+          keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
+        >
+          <ScrollView contentContainerStyle={styles.scrollContainer}>
+            {/* <View style={styles.headerContainer}>
+              <Text style={styles.header}>What are we doing later?</Text>
+            </View>
+            <View style={styles.textBubbleBig}>
+              <Text style={{ fontSize: 8 }}>       </Text>
+            </View>
+            <View style={styles.textBubbleSmall}>
+              <Text style={{ fontSize: 6 }}>    </Text>
+            </View> */}
+  
+            {/* Group Name */}
+            <View style={styles.groupTextContainer}>
+              <Text style={styles.groupText}>{groupName}</Text>
+            </View>
+  
+            {/* Day Buttons */}
+            <View style={styles.dayButtonsContainer}>
+              {daysOfWeek.map((day, index) => (
+                <TouchableOpacity
+                  key={index}
+                  onPress={() => navigation.navigate('DayCalendar', { selectedDay: day, username, groupName })}
+                  style={styles.dayButton}
+                >
+                  <Text style={styles.dayButtonText}>{day.substring(0, 3)}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+  
+            <Text style={styles.subtitle}>All Events</Text>
+  
+            {loadingSlices ? (
+              <Text>Loading slices...</Text>
+            ) : Object.keys(slices).length === 0 ? (
+              <Text style={styles.noEventsText}>No events scheduled yet. </Text>
+            ) : (
+              <View style={styles.slicesList}>
+                {Object.entries(slices)
+                  .sort(([, a], [, b]) => (b.votes || 0) - (a.votes || 0))
+                  .map(([slice, data]) => {
+                    const userVote = getUserVote(slice);
+                    return (
+                      <View key={slice} style={styles.cardContainer}>
+                        {/* Card Header with Title, Checkmark, and Voting Buttons */}
+                        <View style={styles.cardHeader}>
+                          <View style={styles.cardTitleContainer}>
+                            <Text style={styles.cardTitle}>{slice}</Text>
+                            {slice === eventWithMostVotes && (
+                              <Text style={styles.checkmark}>✅</Text>
+                            )}
+                          </View>
+                          <View style={styles.voteContainer}>
+                            <TouchableOpacity
+                              onPress={() => voteSlice(slice, 1)}
+                              style={[styles.voteButton, userVote === 1 && styles.votedUp]}
+                            >
+                              <MaterialIcons name="thumb-up" size={20} color={userVote === 1 ? '#4CAF50' : '#888'} />
+                            </TouchableOpacity>
+                            <Text style={styles.voteCount}>{data.votes || 0}</Text>
+                            <TouchableOpacity
+                              onPress={() => voteSlice(slice, -1)}
+                              style={[styles.voteButton, userVote === -1 && styles.votedDown]}
+                            >
+                              <MaterialIcons name="thumb-down" size={20} color={userVote === -1 ? '#F44336' : '#888'} />
+                            </TouchableOpacity>
+                          </View>
+                        </View>
+  
+                        {/* Card Content */}
+                        <View style={styles.cardContent}>
+                          {data.imageUri && (
+                            <Image source={{ uri: data.imageUri }} style={styles.cardImage} />
+                          )}
+                          <Text style={styles.cardDetails}>
+                            {data.days ? data.days.join(', ') : 'No day assigned'} | {data.startTime} - {data.endTime}
+                          </Text>
+                        </View>
                       </View>
-                      <View style={styles.voteContainer}>
-                        <TouchableOpacity
-                          onPress={() => voteSlice(slice, 1)}
-                          style={[styles.voteButton, userVote === 1 && styles.votedUp]}
-                        >
-                          <MaterialIcons name="thumb-up" size={20} color={userVote === 1 ? '#4CAF50' : '#888'} />
-                        </TouchableOpacity>
-                        <Text style={styles.voteCount}>{data.votes || 0}</Text>
-                        <TouchableOpacity
-                          onPress={() => voteSlice(slice, -1)}
-                          style={[styles.voteButton, userVote === -1 && styles.votedDown]}
-                        >
-                          <MaterialIcons name="thumb-down" size={20} color={userVote === -1 ? '#F44336' : '#888'} />
-                        </TouchableOpacity>
-                      </View>
-                    </View>
-
-                    {/* Card Content */}
-                    <View style={styles.cardContent}>
-                      {data.imageUri && (
-                        <Image source={{ uri: data.imageUri }} style={styles.cardImage} />
-                      )}
-                      <Text style={styles.cardDetails}>
-                        {data.days ? data.days.join(', ') : 'No day assigned'} | {data.startTime} - {data.endTime}
-                      </Text>
-                    </View>
-                  </View>
-                );
-              })}
+                    );
+                  })}
+              </View>
+            )}
+          </ScrollView>
+          <View style={styles.bottomButtonContainer}>
+            <Button title="Add Event" onPress={() => navigation.navigate('AddSliceScreen', { groupName })} />
+            <Button title="Go to Group Screen" onPress={() => navigation.navigate('GroupScreen', { username })} />
           </View>
-        )}
-
-        {/* {slices && Object.keys(slices).length > 0 && (
-          <Button
-            title="How About Wheel Decide"
-            onPress={() => navigation.navigate('WheelOfFortune', { slices: Object.entries(slices).map(([sliceName, sliceData]) => ({ sliceName, sliceData })), username, groupName })}
-          />
-        )} */}
-      </ScrollView>
-      <View style={styles.bottomButtonContainer}>
-        <Button title="Add Event" onPress={() => navigation.navigate('AddSliceScreen', { groupName })} />
-        <Button title="Go to Group Screen" onPress={() => navigation.navigate('GroupScreen', { username })} />
-      </View>
-    </KeyboardAvoidingView>
+        </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 };
 
@@ -239,28 +228,29 @@ const styles = StyleSheet.create({
     backgroundColor: 'black',
     flexDirection: 'column',
     width: '100%',
-    paddingTop: 50,
+    // paddingTop: 5,
   },
-  titleTransformContainer: {
-    transform: [{ scaleX: 0.9 }, { scaleY: 2.8 }],
-    alignSelf: 'center',
-  },
-  title: {
-    fontSize: 55,
-    marginTop: 20,
-    fontWeight: 'bold',
-    color: 'white',
-    textAlign: 'center',
-    width: '100%',
-  },
-  titleUnderline: {
-    height: 5,
-    width: '50%',
-    backgroundColor: 'white',
-    marginTop: 50,
-    alignSelf: 'center',
-  },
-  header: {
+  // get rid of top title text
+  // titleTransformContainer: { 
+  //   transform: [{ scaleX: 0.9 }, { scaleY: 2.8 }],
+  //   alignSelf: 'center',
+  // },
+  // title: {
+  //   fontSize: 55,
+  //   marginTop: 20,
+  //   fontWeight: 'bold',
+  //   color: 'white',
+  //   textAlign: 'center',
+  //   width: '100%',
+  // },
+  // titleUnderline: {
+  //   height: 5,
+  //   width: '50%',
+  //   backgroundColor: 'white',
+  //   marginTop: 50,
+  //   alignSelf: 'center',
+  // },
+  header: { // bubble text style
     fontSize: 18,
     color: 'white',
   },
@@ -407,8 +397,8 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
-    padding: 10,
-    paddingBottom: 25,
+    padding: 5,
+    // paddingBottom: 15,
     backgroundColor: '#FFFFFF',
     borderTopWidth: 0,
     borderTopColor: '#E0E0E0',

@@ -1,16 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import {
-  View,
-  Text,
-  TextInput,
-  Alert,
-  StyleSheet,
-  ScrollView,
-  TouchableOpacity,
-  Keyboard,
-  KeyboardAvoidingView,
-  Platform,
-} from 'react-native';
+import { View, Text, TextInput, Alert, StyleSheet, ScrollView, TouchableOpacity, Keyboard, KeyboardAvoidingView, Platform, SafeAreaView, StatusBar, Modal } from 'react-native';
 // Firebase imports:
 import { 
   getFirestore, collection, query, where, onSnapshot, doc, updateDoc, 
@@ -29,7 +18,14 @@ const GroupScreen = ({ navigation, route }) => {
   const [groupPassword, setGroupPassword] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
   const [creators, setCreators] = useState({}); // Mapping from group ID to creator
+  const [activeMenu, setActiveMenu] = useState(null); // state to track which group's menu is open
+  const [editingGroupId, setEditingGroupId] = useState(null); // ID of group currently being edited
+  const [showEditModal, setShowEditModal] = useState(false); // edit modal visibility 
   const [isKeyboardVisible, setKeyboardVisible] = useState(false); // Track keyboard visibility
+
+  // Modal visibility states:
+  const [showJoinModal, setShowJoinModal] = useState(false);
+  const [showCreateModal, setShowCreateModal] = useState(false);
 
   // Fetch groups from Firestore, members are users
   useEffect(() => {
@@ -60,14 +56,14 @@ const GroupScreen = ({ navigation, route }) => {
     const keyboardDidShowListener = Keyboard.addListener(
       Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow',
       () => {
-        setKeyboardVisible(true); // Set keyboard visibility to true
+        setKeyboardVisible(true);
       }
     );
 
     const keyboardDidHideListener = Keyboard.addListener(
       Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide',
       () => {
-        setKeyboardVisible(false); // Set keyboard visibility to false
+        setKeyboardVisible(false);
       }
     );
 
@@ -82,13 +78,13 @@ const GroupScreen = ({ navigation, route }) => {
     try {
       const groupRef = doc(db, "groups", groupId);
       const groupSnap = await getDoc(groupRef);
-      if (!groupSnap.exists()) {
-        Alert.alert('Error', 'No group under that name.');
+      if (!groupSnap.exists()) { // group does not exist
+        Alert.alert('Error', 'Group does not exist.');
         return;
       }
       const groupData = groupSnap.data();
-      if (groupData.password !== providedPassword) {
-        Alert.alert('Error', 'Incorrect group password.');
+      if (groupData.password !== providedPassword) { // incorrect password
+        Alert.alert('Error', 'Incorrect group password. Please try again.');
         return;
       }
       await updateDoc(groupRef, {
@@ -100,6 +96,94 @@ const GroupScreen = ({ navigation, route }) => {
     }
   };
 
+  const GroupContextMenu = ({ groupId, isCreator, onLeave, onEdit, onDelete }) => {
+    const [isMenuVisible, setIsMenuVisible] = useState(false);
+  
+    return (
+      <View style={styles.contextMenuContainer}>
+        <TouchableOpacity 
+          style={styles.contextMenuButton} 
+          onPress={() => setIsMenuVisible(!isMenuVisible)}
+        >
+          <Text style={styles.contextMenuIcon}>⋮</Text>
+        </TouchableOpacity>
+        
+        {isMenuVisible && (
+          <>
+            {/* Full-screen overlay that will close the menu when clicked */}
+            <TouchableOpacity
+              style={styles.fullScreenOverlay}
+              activeOpacity={1}
+              onPress={() => setIsMenuVisible(false)}
+            />
+            
+            <View style={styles.contextMenuDropdown}>
+              <TouchableOpacity 
+                style={styles.contextMenuItem} 
+                onPress={() => {
+                  onLeave();
+                  setIsMenuVisible(false);
+                }}
+              >
+                <Text style={styles.contextMenuItemText}>Leave Group</Text>
+              </TouchableOpacity>
+              
+              {isCreator && (
+                <>
+                  <TouchableOpacity 
+                    style={styles.contextMenuItem} 
+                    onPress={() => {
+                      onEdit();
+                      setIsMenuVisible(false);
+                    }}
+                  >
+                    <Text style={styles.contextMenuItemText}>Edit Name</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity 
+                    style={[styles.contextMenuItem, styles.contextMenuDeleteItem]} 
+                    onPress={() => {
+                      onDelete();
+                      setIsMenuVisible(false);
+                    }}
+                  >
+                    <Text style={styles.contextMenuDeleteText}>Delete Group</Text>
+                  </TouchableOpacity>
+                </>
+              )}
+            </View>
+          </>
+        )}
+      </View>
+    );
+  };
+
+  const editGroupName = async (newName) => {
+    try {
+      const groupRef = doc(db, "groups", editingGroupId);
+      const newGroupRef = doc(db, "groups", newName);
+      
+      // Get current group data
+      const groupSnap = await getDoc(groupRef);
+      const groupData = groupSnap.data();
+      
+      // Create new document with updated name
+      await setDoc(newGroupRef, {
+        ...groupData,
+        id: newName
+      });
+      
+      // Delete old document 
+      await deleteDoc(groupRef);
+      
+      setShowEditModal(false);
+      setEditingGroupId(null);
+      setGroupName('');
+    } catch (error) {
+      Alert.alert('Error', 'Failed to edit group name');
+      console.error("Error editing group: ", error);
+    }
+  };  
+  
   const createGroupFirestore = async (groupId, user, password) => {
     try {
       const groupRef = doc(db, "groups", groupId);
@@ -137,24 +221,42 @@ const GroupScreen = ({ navigation, route }) => {
     }
   };
 
-  const joinGroup = () => {
+  // Modal submit handlers:
+  // joining group
+  const onJoinModalSubmit = () => {
     if (groupName.trim() && groupPassword.trim()) {
       joinGroupFirestore(groupName, username, groupPassword);
       setGroupName('');
       setGroupPassword('');
-    } else {
-      Alert.alert('Error', 'Please enter a valid group name and password');
+      setShowJoinModal(false);
+    } else { // one or both fields are not filled out
+      Alert.alert('Error', 'Please enter a group name and password');
     }
   };
 
-  const createGroup = () => {
+  // creating group
+  const onCreateModalSubmit = () => { 
     if (groupName.trim() && groupPassword.trim()) {
       createGroupFirestore(groupName, username, groupPassword);
       setGroupName('');
       setGroupPassword('');
-    } else {
-      Alert.alert('Error', 'Please enter a valid group name and password');
+      setShowCreateModal(false);
+    } else { // one or both fields are not filled out
+      Alert.alert('Error', 'Please enter a group name and password');
     }
+  };
+
+  // Open modal functions:
+  const openJoinModal = () => {
+    setGroupName('');
+    setGroupPassword('');
+    setShowJoinModal(true);
+  };
+
+  const openCreateModal = () => {
+    setGroupName('');
+    setGroupPassword('');
+    setShowCreateModal(true);
   };
 
   const leaveGroup = (groupId) => {
@@ -179,273 +281,340 @@ const GroupScreen = ({ navigation, route }) => {
   };
 
   return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'} // adjust behavior based on platform
-      style={styles.container}
-      keyboardVerticalOffset={Platform.OS === 'ios' ? 60 : 0} // adjust offset if needed
-    >
-      {/* Scrollable Content */}
-      <ScrollView
-        contentContainerStyle={styles.scrollContainer}
-        keyboardShouldPersistTaps="handled" // allow taps to dismiss the keyboard
-      >
-        {/* Title Section */}
-        <View style={styles.titleContainer}>
-          <View style={styles.titleTransformContainer}>
-            <Text style={styles.title}>THE MOVE</Text>
-          </View>
-          <View style={styles.titleUnderline} />
-          <View style={styles.headerContainer}>
-            <Text style={styles.header}>What are we doing later?</Text>
-          </View>
-          <View style={styles.textBubbleBig}>
-            <Text style={{ fontSize: 9 }}>       </Text>
-          </View>
-          <View style={styles.textBubbleSmall}>
-            <Text style={{ fontSize: 6 }}>    </Text>
-          </View>
-        </View>
+    <SafeAreaView style={{ flex: 1, backgroundColor: '#FFFFFF' }}>
+      <StatusBar barStyle="dark-content" />
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          style={styles.container}
+          keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
+        >
+          {/* Scrollable Content */}
+          <ScrollView
+            contentContainerStyle={styles.scrollContainer}
+            keyboardShouldPersistTaps="handled"
+          >
+            {/* Error Message */}
+            {errorMessage && <Text style={styles.errorText}>{errorMessage}</Text>}
 
-        {/* Error Message */}
-        {errorMessage && <Text style={styles.errorText}>{errorMessage}</Text>}
+            {/* Group List */}
+            <View style={styles.groupsList}>
+              {userGroups.length > 0 ? (
+                userGroups.map((group) => (
+                  <View key={group.id} style={styles.groupCard}>
+                    <View style={styles.groupCardHeader}>
+                      <Text style={styles.groupNameText} numberOfLines={1} ellipsizeMode="tail">
+                        Group: {group.id}
+                      </Text>
+                      <GroupContextMenu
+                        groupId={group.id}
+                        isCreator={creators[group.id] === username.toLowerCase()}
+                        onLeave={() => leaveGroup(group.id)}
+                        onEdit={() => {
+                          setGroupName(group.id);
+                          setShowEditModal(true);
+                          setEditingGroupId(group.id);
+                        }}
+                        onDelete={() => handleDeleteGroup(group.id)}
+                      />
+                    </View>
+                    <TouchableOpacity
+                      style={styles.actionButton}
+                      onPress={() => navigation.navigate('EventScreen', { username, groupName: group.id })}
+                    >
+                      <Text style={styles.actionButtonText}>
+                        Go to Group
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                ))
+              ) : (
+                <Text style={styles.noGroupsText}>No groups found. Create or join a group!</Text>
+              )}
+            </View>
+          </ScrollView>
 
-        {/* Group List */}
-        <View style={styles.groupsList}>
-          {userGroups.length > 0 ? (
-            userGroups.map((group) => (
-              <View key={group.id} style={styles.groupCard}>
-                <Text style={styles.groupName}>Group: {group.id}</Text>
-                <Text style={styles.creatorText}>Creator: {creators[group.id] || 'No creator found'}</Text>
-                <View style={styles.buttonContainer}>
-                  <TouchableOpacity
-                    style={styles.actionButton}
-                    onPress={() => navigation.navigate('EventScreen', { username, groupName: group.id })}
+          {/* Fixed Bottom Section with only buttons */}
+          <View style={[styles.bottomContainer, { bottom: isKeyboardVisible ? 325 : 0 }]}>
+            <View style={styles.horizontalButtonContainer}>
+              <TouchableOpacity style={styles.halfWidthButton} onPress={openJoinModal}>
+                <Text style={styles.buttonText}>JOIN</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.halfWidthButton} onPress={openCreateModal}>
+                <Text style={styles.buttonText}>CREATE</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+
+          {showEditModal && (
+            <Modal
+              transparent={true}
+              animationType="slide"
+              visible={showEditModal}
+              onRequestClose={() => setShowEditModal(false)}
+            >
+              <View style={styles.modalBackground}>
+                <View style={styles.modalContainer}>
+                  <Text style={styles.modalTitle}>Edit Group Name</Text>
+                  <TextInput
+                    style={styles.modalInput}
+                    placeholder="New Group Name"
+                    placeholderTextColor="#888"
+                    value={groupName}
+                    onChangeText={setGroupName}
+                    autoCapitalize="none"
+                    maxLength={20} // Prevent overly long names
+                  />
+                  <TouchableOpacity 
+                    style={styles.modalButton} 
+                    onPress={() => editGroupName(groupName)}
                   >
-                    <Text style={styles.actionButtonText}>Go to {group.id}</Text>
+                    <Text style={styles.buttonText}>SAVE CHANGES</Text>
                   </TouchableOpacity>
-                  <TouchableOpacity
-                    style={styles.leaveButton}
-                    onPress={() => leaveGroup(group.id)}
+                  <TouchableOpacity 
+                    style={[styles.modalButton, styles.modalCancelButton]} 
+                    onPress={() => setShowEditModal(false)}
                   >
-                    <Text style={styles.leaveButtonText}>Leave Group</Text>
+                    <Text style={styles.buttonText}>Cancel</Text>
                   </TouchableOpacity>
                 </View>
-                {creators[group.id] === username.toLowerCase() && (
-                  <TouchableOpacity
-                    style={styles.deleteButton}
-                    onPress={() => handleDeleteGroup(group.id)}
-                  >
-                    <Text style={styles.deleteButtonText}>Delete Group</Text>
-                  </TouchableOpacity>
-                )}
               </View>
-            ))
-          ) : (
-            <Text style={styles.noGroupsText}>No groups found. Create or join a group!</Text>
+            </Modal>
           )}
-        </View>
-      </ScrollView>
 
-      {/* Fixed Bottom Section */}
-      <View style={[styles.bottomContainer, { bottom: isKeyboardVisible ? 325 : 0 }]}>
-        <TextInput
-          style={styles.input}
-          placeholder="ENTER GROUP NAME"
-          placeholderTextColor="#888"
-          value={groupName}
-          onChangeText={setGroupName}
-        />
-        <TextInput
-          style={styles.input}
-          placeholder="ENTER GROUP PASSWORD"
-          placeholderTextColor="#888"
-          value={groupPassword}
-          onChangeText={setGroupPassword}
-          secureTextEntry={true}
-        />
-        <TouchableOpacity style={styles.button} onPress={joinGroup}>
-          <Text style={styles.buttonText}>JOIN GROUP</Text>
-        </TouchableOpacity>
-        <View style={styles.buttonSpacer} />
-        <TouchableOpacity style={styles.button} onPress={createGroup}>
-          <Text style={styles.buttonText}>CREATE GROUP</Text>
-        </TouchableOpacity>
-      </View>
-    </KeyboardAvoidingView>
+          {/* Join Group Modal */}
+          {showJoinModal && (
+            <Modal
+              transparent={true}
+              animationType="slide"
+              visible={showJoinModal}
+              onRequestClose={() => setShowJoinModal(false)}
+            >
+              <View style={styles.modalBackground}>
+                <View style={styles.modalContainer}>
+                  <Text style={styles.modalTitle}>Join Group</Text>
+                  <TextInput
+                    style={styles.modalInput}
+                    placeholder="Enter Group Name"
+                    placeholderTextColor="#888"
+                    value={groupName}
+                    onChangeText={(text) => setGroupName(text.slice(0, 20))} // Limit to 20 characters
+                    maxLength={20} // Double protection
+                  />
+                  <TextInput
+                    style={styles.modalInput}
+                    placeholder="Enter Group Password"
+                    placeholderTextColor="#888"
+                    value={groupPassword}
+                    onChangeText={setGroupPassword}
+                    secureTextEntry={true}
+                  />
+                  <TouchableOpacity style={styles.modalButton} onPress={onJoinModalSubmit}>
+                    <Text style={styles.buttonText}>JOIN GROUP</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity 
+                    style={[styles.modalButton, { marginTop: 10, backgroundColor: '#aaa' }]} 
+                    onPress={() => setShowJoinModal(false)}
+                  >
+                    <Text style={styles.buttonText}>Cancel</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </Modal>
+          )}
+
+          {/* Create Group Modal */}
+          {showCreateModal && (
+            <Modal
+              transparent={true}
+              animationType="slide"
+              visible={showCreateModal}
+              onRequestClose={() => setShowCreateModal(false)}
+            >
+              <View style={styles.modalBackground}>
+                <View style={styles.modalContainer}>
+                  <Text style={styles.modalTitle}>Create Group</Text>
+                  <TextInput
+                    style={styles.modalInput}
+                    placeholder="Enter Group Name"
+                    placeholderTextColor="#888"
+                    value={groupName}
+                    onChangeText={(text) => setGroupName(text.slice(0, 20))} // Limit to 20 characters
+                    maxLength={20} // Double protection
+                  />
+                  <TextInput
+                    style={styles.modalInput}
+                    placeholder="Enter Group Password"
+                    placeholderTextColor="#888"
+                    value={groupPassword}
+                    onChangeText={setGroupPassword}
+                    secureTextEntry={true}
+                  />
+                  <TouchableOpacity style={styles.modalButton} onPress={onCreateModalSubmit}>
+                    <Text style={styles.buttonText}>CREATE GROUP</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity 
+                    style={[styles.modalButton, { marginTop: 10, backgroundColor: '#aaa' }]} 
+                    onPress={() => setShowCreateModal(false)}
+                  >
+                    <Text style={styles.buttonText}>Cancel</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </Modal>
+          )}
+
+        </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
+  container: { // background color 
     flex: 1,
     backgroundColor: '#FFFFFF',
   },
-  scrollContainer: {
+  scrollContainer: { // styling for scroll function, how much space there is at the bottom of the container after scrolling
     flexGrow: 1,
-    paddingBottom: 150, // add padding to ensure the bottom section doesn't overlap
+    paddingBottom: 90,
   },
-  titleContainer: {
-    backgroundColor: 'black',
-    flexDirection: 'column',
-    width: '100%',
-    paddingTop: 50,
-  },
-  titleTransformContainer: {
-    transform: [
-      { scaleX: 0.9 },
-      { scaleY: 2.8 }
-    ],
-    alignSelf: 'center',
-  },
-  title: {
-    fontSize: 55,
-    marginTop: 20,
-    fontWeight: 'bold',
-    color: 'white',
-    textAlign: 'center',
-    width: '100%',
-  },
-  titleUnderline: {
-    height: 5,
-    width: '50%',
-    backgroundColor: 'white',
-    marginTop: 50,
-    alignSelf: 'center'
-  },
-  header: {
-    fontSize: 18,
-    color: 'white',
-  },
-  headerContainer: {
-    backgroundColor: "#007AFF",
-    marginLeft: 14,
-    marginBottom: 2,
-    marginTop: 15,
-    paddingTop: 2,
-    paddingBottom: 2,
-    paddingLeft: 8,
-    paddingRight: 8,
-    borderRadius: 20,
-    alignSelf: 'flex-start',
-  },
-  textBubbleBig: {
-    backgroundColor: "#007AFF",
-    borderRadius: 10,
-    marginLeft: 10,
-    alignSelf: 'flex-start',
-    marginTop: 2,
-  },
-  textBubbleSmall: {
-    backgroundColor: "#007AFF",
-    borderRadius: 10,
-    marginLeft: 5,
-    marginBottom: 10,
-    alignSelf: 'flex-start',
-    marginTop: 2,
-  },
-  groupsList: {
+  groupsList: { // list styling
     width: '100%',
     padding: 15,
   },
-  groupCard: {
+  groupCard: { // card containing group
     marginBottom: 15,
     padding: 15,
     borderWidth: 2,
     borderColor: '#000000',
     borderRadius: 10,
     backgroundColor: '#F5F5F5',
+    overflow: 'visible', 
   },
-  groupName: {
+  groupNameText: { // Group name text
     fontSize: 18,
     fontWeight: 'bold',
     color: '#000000',
+    flexShrink: 1, // Allow text to shrink if needed
   },
-  creatorText: {
+  creatorText: { // text of group creator 
     fontSize: 16,
     color: '#000000',
     marginTop: 5,
   },
-  buttonContainer: {
+  buttonContainer: { // buttons in main group cards
     flexDirection: 'row',
     justifyContent: 'space-between',
     marginTop: 10,
+    flexWrap: 'wrap', // Allow buttons to wrap if needed  
   },
-  actionButton: {
+  actionButton: { // "go to" button styling
     backgroundColor: '#000000',
     paddingVertical: 10,
-    paddingHorizontal: 20,
+    paddingHorizontal: 20, // Reduced from 20
     borderRadius: 5,
+    minWidth: '45%', // Minimum width
+    marginBottom: 5, // Space if buttons wrap
   },
-  actionButtonText: {
+  actionButtonText: { // "go to" button text
     fontSize: 16,
     fontWeight: 'bold',
     color: '#FFFFFF',
+    textAlign: 'center',
   },
-  leaveButton: {
-    backgroundColor: '#FF0000',
-    paddingVertical: 10,
-    paddingHorizontal: 20,
-    borderRadius: 5,
-  },
-  leaveButtonText: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#FFFFFF',
-  },
-  deleteButton: {
-    backgroundColor: '#FFCCCC',
-    paddingVertical: 10,
-    paddingHorizontal: 20,
-    borderRadius: 5,
-    marginTop: 10,
-    alignItems: 'center',
-  },
-  deleteButtonText: {
+  // leaveButton: { // leave button styling
+  //   backgroundColor: '#FF0000',
+  //   paddingVertical: 10,
+  //   paddingHorizontal: 20,
+  //   borderRadius: 5,
+  //   marginBottom: 5,
+  // },
+  // leaveButtonText: { // leave button text
+  //   fontSize: 16,
+  //   fontWeight: 'bold',
+  //   color: '#FFFFFF',
+  // },
+  // deleteButton: { // button for deleting group 
+  //   backgroundColor: '#FFCCCC',
+  //   paddingVertical: 10,
+  //   paddingHorizontal: 20,
+  //   borderRadius: 5,
+  //   marginTop: 10,
+  //   alignItems: 'center',
+  // },
+  deleteButtonText: { // text for deleting group
     fontSize: 16,
     fontWeight: 'bold',
     color: '#FF0000',
   },
-  noGroupsText: {
+  noGroupsText: { // text for when no groups exist
     fontSize: 16,
     color: '#888',
     textAlign: 'center',
     marginTop: 20,
   },
-  input: {
-    width: '100%',
-    padding: 15,
-    marginBottom: 15,
-    borderWidth: 2,
-    borderColor: '#000000',
-    borderRadius: 10,
-    backgroundColor: '#FFFFFF',
-    color: '#000000',
-    fontSize: 16,
-  },
-  button: {
-    backgroundColor: '#000000',
-    paddingVertical: 15,
-    paddingHorizontal: 30,
-    borderRadius: 10,
-    width: '100%',
-    alignItems: 'center',
-  },
-  buttonText: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#FFFFFF',
-  },
-  buttonSpacer: {
-    height: 15,
-  },
-  errorText: {
-    color: '#FF0000',
+  errorText: { // text for error
+    color: '#FF0000', // red 
     fontSize: 14,
     fontWeight: 'bold',
     textAlign: 'center',
     marginBottom: 10,
   },
-  bottomContainer: {
+
+  // Context Menu Styles
+  contextMenuContainer: { // container for "..."
+    position: 'relative',
+    zIndex: 99999, 
+  },
+  contextMenuButton: { // "..." button padding
+    padding: 10, 
+  },
+  contextMenuIcon: { // "..." button styling
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#000',
+  },
+  contextMenuDropdown: { // dropdown styling for options after pressing "..."
+    position: 'absolute',
+    right: 15,
+    top: 35,
+    backgroundColor: '#fff',
+    borderRadius: 5,
+    borderWidth: 1,
+    borderColor: '#ddd',
+    minWidth: 150,
+    zIndex: 99999, 
+  },
+  contextMenuItem: { // container styling for dropdown menu
+    padding: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
+  },
+  contextMenuItemText: { // text styling for items in dropdown menu
+    fontSize: 16,
+    color: '#333',
+  },
+  contextMenuDeleteText: { // text styling for the delete text in dropdown menu to be red
+    fontSize: 16,
+    color: 'red', // red
+  },
+  menuOverlay: {
+    position: 'absolute',
+  },
+
+  // Group Card Header
+  groupCardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8, // Space between header and content
+  }, 
+
+  // Modal Styles
+  modalCancelButton: {
+    marginTop: 10, 
+    backgroundColor: '#aaa' // Gray cancel button
+  },
+  bottomContainer: { // fixes styling for the join and create buttons 
     width: '100%',
     padding: 20,
     backgroundColor: '#FFFFFF',
@@ -453,8 +622,62 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
   },
+  horizontalButtonContainer: { // contains the join and create buttons
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    width: '100%',
+  },
+  halfWidthButton: { // button styling for the half widths at the bottom
+    backgroundColor: '#000000',
+    paddingVertical: 15,
+    borderRadius: 10,
+    width: '47%', 
+    alignItems: 'center',
+  },
+  buttonText: { // font for join/create buttons, also used in the modal
+    fontSize: 17,
+    fontWeight: 'bold',
+    color: '#FFFFFF',
+  },
+  modalButton: { // modal buttons for joining and canceling
+    backgroundColor: '#000000',
+    paddingVertical: 15,
+    paddingHorizontal: 30,
+    borderRadius: 10,
+    width: '100%',
+    alignItems: 'center',
+  },
+  modalInput: { // input field for join/create modal
+    width: '100%',
+    padding: 15,
+    marginBottom: 15,
+    borderWidth: 2,
+    borderColor: '#000000',
+    borderRadius: 10,
+    backgroundColor: '#FFFFFF',
+    color: '#000000',
+    fontSize: 16,
+  },
+  modalBackground: { // background of the screen behind the modal 
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0,0,0,0.5)',
+  },
+  modalContainer: { // container of popup for join/create group modal
+    width: '80%',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 10,
+    padding: 20,
+    marginBottom: 200, // make modal higher for keyboard
+  },
+  modalTitle: { // title for join/create group modal
+    fontSize: 20,
+    fontWeight: 'bold',
+    marginBottom: 10,
+    textAlign: 'center',
+  },
 });
 
 export default GroupScreen;
-
 
