@@ -11,6 +11,7 @@ import AddSliceScreen from './screens/AddSliceScreen';
 import DayCalendar from './screens/DayCalendar';
 import Event from './screens/Event';
 import WheelOfFortune from './screens/WheelOfFortune';
+import InputSchedule from './screens/InputSchedule';
 
 // Stack navigator setup
 const Stack = createStackNavigator();
@@ -35,6 +36,8 @@ const App = () => {
         <Stack.Screen name="DayCalendar" component={DayCalendar} />
         <Stack.Screen name="Event" component={Event} />
         <Stack.Screen name="WheelOfFortune" component={WheelOfFortune} />
+        <Stack.Screen name="InputSchedule" component={InputSchedule} options={{headerShown: false}}/>
+
       </Stack.Navigator>
     </NavigationContainer>
   );

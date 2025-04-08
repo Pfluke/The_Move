@@ -40,6 +40,7 @@ const LoginScreen = ({ navigation }) => {
             });
 
             navigation.navigate('GroupScreen', { username, userGroups });
+            
           } else {
             showError('Incorrect password');
           }
@@ -67,7 +68,7 @@ const LoginScreen = ({ navigation }) => {
         } else {
           await setDoc(userDocRef, { username: username.toLowerCase(), password });
           setLoginMessage('Account created successfully!');
-          navigation.navigate('GroupScreen', { username, userGroups: [] });
+          navigation.navigate('InputSchedule', { username });
         }
       } catch (error) {
         console.error('Error creating account', error);
