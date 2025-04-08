@@ -115,33 +115,24 @@ const EventScreen = ({ navigation, route }) => {
   const eventWithMostVotes = getEventWithMostVotes();
 
   return (
-    <View style={{ flex: 1 }}>
-      <StatusBar barStyle="light-content" />
+    <SafeAreaView style={{ flex: 1, backgroundColor:"white" }}>
+      <StatusBar barStyle="dark-content" />
       {/* black safe background for ios white text at top */}
-      <SafeAreaView style={{ flex: 0, backgroundColor: 'black' }} /> 
-      <SafeAreaView style={{ flex: 1, backgroundColor: '#FFFFFF' }}> 
         <KeyboardAvoidingView
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
           style={styles.container}
           keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
         >
           <ScrollView contentContainerStyle={styles.scrollContainer}>
-            {/* Title Section */}
-            <View style={styles.titleContainer}>
-              <View style={styles.titleTransformContainer}>
-                <Text style={styles.title}>THE MOVE</Text>
-              </View>
-              <View style={styles.titleUnderline} />
-              <View style={styles.headerContainer}>
-                <Text style={styles.header}>What are we doing later?</Text>
-              </View>
-              <View style={styles.textBubbleBig}>
-                <Text style={{ fontSize: 8 }}>       </Text>
-              </View>
-              <View style={styles.textBubbleSmall}>
-                <Text style={{ fontSize: 6 }}>    </Text>
-              </View>
+            {/* <View style={styles.headerContainer}>
+              <Text style={styles.header}>What are we doing later?</Text>
             </View>
+            <View style={styles.textBubbleBig}>
+              <Text style={{ fontSize: 8 }}>       </Text>
+            </View>
+            <View style={styles.textBubbleSmall}>
+              <Text style={{ fontSize: 6 }}>    </Text>
+            </View> */}
   
             {/* Group Name */}
             <View style={styles.groupTextContainer}>
@@ -220,8 +211,7 @@ const EventScreen = ({ navigation, route }) => {
             <Button title="Go to Group Screen" onPress={() => navigation.navigate('GroupScreen', { username })} />
           </View>
         </KeyboardAvoidingView>
-      </SafeAreaView>
-    </View>
+    </SafeAreaView>
   );
 };
 

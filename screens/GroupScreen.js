@@ -202,10 +202,8 @@ const GroupScreen = ({ navigation, route }) => {
   };
 
   return (
-    <View style={{ flex: 1 }}>
-      <StatusBar barStyle="light-content" />
-      <SafeAreaView style={{ flex: 0, backgroundColor: 'black' }} />
-      <SafeAreaView style={{ flex: 1, backgroundColor: '#FFFFFF' }}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: '#FFFFFF' }}>
+      <StatusBar barStyle="dark-content" />
         <KeyboardAvoidingView
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
           style={styles.container}
@@ -216,18 +214,6 @@ const GroupScreen = ({ navigation, route }) => {
             contentContainerStyle={styles.scrollContainer}
             keyboardShouldPersistTaps="handled"
           >
-            {/* Title Section */}
-            <View style={styles.titleContainer}>
-              <View style={styles.headerContainer}>
-                <Text style={styles.header}>What are we doing later?</Text>
-              </View>
-              <View style={styles.textBubbleBig}>
-                <Text style={{ fontSize: 9 }}>       </Text>
-              </View>
-              <View style={styles.textBubbleSmall}>
-                <Text style={{ fontSize: 6 }}>    </Text>
-              </View>
-            </View>
 
             {/* Error Message */}
             {errorMessage && <Text style={styles.errorText}>{errorMessage}</Text>}
@@ -361,8 +347,7 @@ const GroupScreen = ({ navigation, route }) => {
           )}
 
         </KeyboardAvoidingView>
-      </SafeAreaView>
-    </View>
+    </SafeAreaView>
   );
 };
 
@@ -374,64 +359,6 @@ const styles = StyleSheet.create({
   scrollContainer: {
     flexGrow: 1,
     paddingBottom: 150,
-  },
-  titleContainer: {
-    backgroundColor: 'black',
-    flexDirection: 'column',
-    width: '100%',
-    paddingTop: 5,
-  },
-  titleTransformContainer: {
-    alignSelf: 'center',
-  },
-  title: {
-    fontSize: 55,
-    marginTop: 20,
-    fontWeight: 'bold',
-    color: 'white',
-    textAlign: 'center',
-    width: '100%',
-  },
-  titleUnderline: {
-    height: 5,
-    width: '50%',
-    backgroundColor: 'white',
-    marginTop: 50,
-    alignSelf: 'center'
-  },
-  header: {
-    fontSize: 18,
-    color: 'white',
-  },
-  // Updated headerContainer: added larger black border
-  headerContainer: {
-    backgroundColor: "#007AFF",
-    marginLeft: 14,
-    marginBottom: 2,
-    marginTop: 15,
-    paddingTop: 2,
-    paddingBottom: 2,
-    paddingLeft: 8,
-    paddingRight: 8,
-    borderRadius: 20,
-    alignSelf: 'flex-start',
-    borderWidth: 3,
-    borderColor: 'black',
-  },
-  textBubbleBig: {
-    backgroundColor: "#007AFF",
-    borderRadius: 10,
-    marginLeft: 10,
-    alignSelf: 'flex-start',
-    marginTop: 2,
-  },
-  textBubbleSmall: {
-    backgroundColor: "#007AFF",
-    borderRadius: 10,
-    marginLeft: 5,
-    marginBottom: 10,
-    alignSelf: 'flex-start',
-    marginTop: 2,
   },
   groupsList: {
     width: '100%',
