@@ -32,7 +32,11 @@ const App = () => {
           headerShown: false, 
         }} />
         <Stack.Screen name="EventScreen" component={EventScreen} />
-        <Stack.Screen name="EventsOfWeek" component={EventsOfWeek} />
+        <Stack.Screen name="EventsOfWeek" component={EventsOfWeek}
+        options={{
+          headerShown: false, 
+        }}
+        />
         <Stack.Screen name="AddSliceScreen" component={AddSliceScreen} />
         <Stack.Screen name="DayCalendar" component={DayCalendar} />
         <Stack.Screen name="Event" component={Event} />

@@ -42,139 +42,176 @@ const EventsOfWeek = ({ route }) => {
     const eventWithMostVotes = getEventWithMostVotes();
 
     return (
-        <SafeAreaView style={{ flex: 1, backgroundColor:"white" }}>
-        <StatusBar barStyle="dark-content" />
-        <KeyboardAvoidingView
-            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-            style={styles.container}
-            keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
-        >
-        </KeyboardAvoidingView>
-        <Text style={styles.subtitle}>All Events</Text>
-        {eventData && Object.keys(eventData).length === 0 ? (
-            <Text style={styles.noEventsText}>No events scheduled yet. </Text>
-        ) : (
-            <View style={styles.EventDataList}>
-                {Object.entries(eventData)
-                    .sort(([, a], [, b]) => (b.votes || 0) - (a.votes || 0))
-                    .map(([slice, data]) => {
-                    const userVote = getUserVote(slice);  
-                    return (
-                        <View key={slice} style={styles.cardContainer}>
-                        
-                            {/* Card Header with Title, Checkmark, and Voting Buttons */}
-                            <View style={styles.cardHeader}>
-                                <View style={styles.cardTitleContainer}>
-                                    <Text style={styles.cardTitle}>
-                                        {slice}
-                                    </Text>
-                                    {slice === eventWithMostVotes && (
-                                        <Text style={styles.checkmark}>
-                                            ✅
-                                        </Text>
-                                    )}
-                                </View>
-                                <View style={styles.voteContainer}>
-                                        <Text style={styles.voteCount}>
-                                            {data.votes || 0}
-                                        </Text>
-                                </View>
-                            </View>
+        <View style={{ flex: 1, backgroundColor:"black" }}>
+            <StatusBar barStyle="light-content" backgroundColor="black" />
             
-                            {/* Card Content */}
-                            <View style={styles.cardContent}>
-                                {data.imageUri && (
-                                    <Image 
-                                        source={{ uri: data.imageUri }}
-                                        style={styles.cardImage}
-                                    />
-                                )}
-                                <Text style={styles.cardDetails}>
-                                    {data.days ? data.days.join(', ') : 'No day assigned'} | {data.startTime} - {data.endTime}
-                                </Text>
-                            </View>
-                        </View>
-                    );
-                })}
+            <View style={styles.titleContainer}>
+                <Text style={styles.title}>TOP EVENTS OF THE WEEK</Text>
             </View>
-            )}
-        </SafeAreaView>
+            
+            <SafeAreaView style={{ flex: 1}}>
+                <KeyboardAvoidingView
+                    behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+                    style={{ flex: 1, backgroundColor: 'white' }}
+                    keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
+                >
+                    <ScrollView // wrap the content in a scroll view
+                        contentContainerStyle={styles.scrollContainer} // Ensure the content is scrollable
+                        keyboardShouldPersistTaps="handled" // Allow taps to dismiss the keyboard
+                    >      
+                        {eventData && Object.keys(eventData).length === 0 ? (
+                            <Text style={styles.noEventsText}>NO EVENTS CURRENTLY SCHEDULED </Text>
+                        ) : (
+                            <View style={styles.EventDataList}>
+                                {Object.entries(eventData)
+                                    .sort(([, a], [, b]) => (b.votes || 0) - (a.votes || 0))
+                                    .map(([slice, data]) => {
+                                    const userVote = getUserVote(slice);  
+
+                                    // Determine card background color based on conditions
+                                    const isTopEvent = slice === eventWithMostVotes;
+                                    const hasPositiveVotes = data.votes > 0;
+                                    const hasNegativeVotes = data.votes < 0;
+                                    
+                                    let cardBackgroundColor;
+                                    if (isTopEvent) {
+                                        cardBackgroundColor = '#FFD700'; // gold for top event
+                                    } else if (hasPositiveVotes) {
+                                        cardBackgroundColor = '#d4f7d4'; // light green for positive votes
+                                    } else if (hasNegativeVotes) {
+                                        cardBackgroundColor = '#ffdddd'; // light red for negative votes
+                                    } else {
+                                        cardBackgroundColor = '#FFF'; // default white for zero votes
+                                    }
+
+                                    return (
+                                        <View key={slice} style={[styles.cardContainer, {backgroundColor: cardBackgroundColor}]}>
+                                            <View style={styles.cardContentRow}>
+                                                {/* Left Column: Event Title and Details */}
+                                                <View style={styles.eventDetailsColumn}>
+                                                    <Text style={styles.cardTitle}>
+                                                        {slice}
+                                                    </Text>
+
+                                                    {/* Event Image */}
+                                                    {data.imageUri && (
+                                                        <Image source={{ uri: data.imageUri }} style={styles.cardImage} />
+                                                    )}
+
+                                                    {/* Event Days and Time */}
+                                                    <Text style={styles.cardDetails}>
+                                                        {data.days ? data.days.join(', ') : 'No day assigned'} | {data.startTime} - {data.endTime}
+                                                    </Text>
+                                                </View>
+
+                                                {/* Right Column: Vote Count */}
+                                                <View style={ styles.voteColumn }>
+                                                    <Text style={styles.voteCount}>
+                                                        {data.votes || 0}
+                                                    </Text>
+                                                </View>
+                                            </View>
+                                        </View>
+                                    );
+                                })}
+                            </View>
+                        )}
+                        </ScrollView>
+                </KeyboardAvoidingView>
+            </SafeAreaView>
+        </View>
     );
 };
 
 const styles = StyleSheet.create({
-    subtitle: {
-        fontSize: 18,
+    scrollContainer: {
+        flexGrow: 1, // Ensure the content grows to fill the available space
+        alignItems: 'center',
+    },
+    titleContainer: {
+        alignItems: 'center',
+        backgroundColor: 'black',
+        width: '100%',
+        height: 120,
+        paddingTop: 60
+    },
+    title: {
+        fontSize: 28,
         fontWeight: 'bold',
         marginVertical: 10,
         textAlign: 'center',
-      },
-      EventDataList: {
+        color: 'white',
+    },
+    EventDataList: {
         width: '100%',
         padding: 10,
-      },
-      cardContainer: {
+    },
+    cardContainer: {
         backgroundColor: '#FFF',
         borderRadius: 10,
         marginBottom: 10,
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
+        shadowOpacity: 0.3,
         shadowRadius: 4,
-        elevation: 3,
         padding: 10,
-      },
-      cardHeader: {
+        flexDirection: 'column',
+    },
+    cardHeader: {
+        justifyContent: 'space-between',
+        alignSelf: 'center',
+        marginBottom: 8,
+    },
+    cardContentRow: {
         flexDirection: 'row',
         justifyContent: 'space-between',
+        alignItems: 'flex-start',
+    },
+    eventDetailsColumn: {
+        flex: 3,
+        paddingLeft: 10,
+    },
+    voteColumn: {
         alignItems: 'center',
-        marginBottom: 10,
-      },
-      cardTitleContainer: {
-        flexDirection: 'row',
-        alignItems: 'center',
-      },
-      cardTitle: {
-        fontSize: 18,
+    },
+// Container to add black circles around number, cannot fit to all numbers
+//   voteCountContainer: {
+//     borderRadius: 50,
+//     paddingHorizontal: 6,
+//     backgroundColor: 'black',
+//     justifyContent: 'center',
+//     alignItems: 'center',
+//     marginTop: 4,
+//   },
+    voteCount: {
+        fontSize: 32,
+        color: 'black',
+        fontWeight: 'bold',
+        marginRight: 12,
+        marginTop: 4,
+    },
+    cardTitle: {
+        fontSize: 28,
         fontWeight: 'bold',
         color: '#000',
-      },
-      checkmark: {
+    },
+    checkmark: {
         marginLeft: 5,
-      },
-      cardContent: {
+    },
+    cardContent: {
         marginBottom: 5,
-      },
-      cardImage: {
+        alignSelf: 'center',
+    },
+    cardImage: {
         width: '100%',
         height: 150,
         borderRadius: 5,
         marginBottom: 10,
-      },
-      cardDetails: {
+    },
+    cardDetails: {
         fontSize: 14,
         color: '#666',
-      },
-      voteContainer: {
-        flexDirection: 'row',
-        alignItems: 'center',
-      },
-      voteButton: {
-        padding: 5,
-        borderRadius: 20,
-        marginHorizontal: 5,
-      },
-      votedUp: {
-        backgroundColor: '#E8F5E9',
-      },
-      votedDown: {
-        backgroundColor: '#FFEBEE',
-      },
-      voteCount: {
-        fontSize: 16,
-        color: '#000',
-        marginHorizontal: 10,
-      },
+    },
 });
 
 export default EventsOfWeek;
