@@ -45,74 +45,21 @@ const EventScreen = ({ navigation, route }) => {
     return () => unsubscribe();
   }, [groupName]);
 
-  const voteSlice = async (sliceName, voteType) => {
-    try {
-      const groupSnap = await getDoc(groupDocRef);
-      if (!groupSnap.exists()) {
-        await setDoc(groupDocRef, { slices: {} });
-      }
-
-      const data = groupSnap.data();
-      const sliceData = data?.slices?.[sliceName] || {
-        votes: 0,
-        voters: {},
-        days: [],
-        description: '',
-        startTime: '',
-        endTime: '',
-        imageUri: '',
-      };
-
-      const currentVotes = sliceData.votes || 0;
-      const currentVoters = sliceData.voters || {};
-      const userCurrentVote = currentVoters[username] || 0;
-      let newVotes = currentVotes;
-      let updatedVoters = { ...currentVoters };
-
-      if (userCurrentVote === voteType) {
-        newVotes -= voteType;
-        delete updatedVoters[username];
-      } else {
-        newVotes += voteType - userCurrentVote;
-        updatedVoters[username] = voteType;
-      }
-
-      await updateDoc(groupDocRef, {
-        [`slices.${sliceName}`]: {
-          ...sliceData,
-          votes: newVotes,
-          voters: updatedVoters,
-        },
-      });
-
-    } catch (error) {
-      console.error("Error updating vote:", error);
-      Alert.alert("Error", error.message);
-    }
-  };
-
-  const getUserVote = (sliceName) => {
-    const sliceData = slices[sliceName] || {};
-    return sliceData.voters ? sliceData.voters[username] : 0;
-  };
-
   const daysOfWeek = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
-  const getEventWithMostVotes = () => { 
-    let maxVotes = -1;
-    let eventWithMostVotes = null;
-
-    Object.entries(slices).forEach(([sliceName, sliceData]) => {
-      if (sliceData.votes > maxVotes) {
-        maxVotes = sliceData.votes;
-        eventWithMostVotes = sliceName;
-      }
-    });
-
-    return eventWithMostVotes;
+  const getSortedDays = () => {
+    const today = new Date();
+    const currentDayIndex = today.getDay();
+    const sortedDays = [
+      ...daysOfWeek.slice(currentDayIndex),
+      ...daysOfWeek.slice(0, currentDayIndex)
+    ];
+    
+    return sortedDays;
   };
 
-  const eventWithMostVotes = getEventWithMostVotes();
+  const sortedDaysOfWeek = getSortedDays();
+
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor:"white" }}>
@@ -131,13 +78,19 @@ const EventScreen = ({ navigation, route }) => {
 
         {/* Day Buttons */}
         <View style={styles.dayButtonsContainer}>
-          {daysOfWeek.map((day, index) => (
+          {sortedDaysOfWeek.map((day, index) => (
             <TouchableOpacity
               key={index}
               onPress={() => navigation.navigate('DayCalendar', { selectedDay: day, username, groupName })}
-              style={styles.dayButton}
+              style={[
+                styles.dayButton,
+                // Highlight today's button
+                index === 0 ? styles.todayButton : null
+              ]}
             >
-              <Text style={styles.dayButtonText}>{day}</Text>
+              <Text style={styles.dayButtonText}>
+                {day}
+              </Text>
             </TouchableOpacity>
           ))}
         </View>
