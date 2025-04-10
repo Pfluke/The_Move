@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { View, Text, Button, Alert, StyleSheet, ScrollView, TouchableOpacity, Image, KeyboardAvoidingView, Platform, SafeAreaView ,StatusBar } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 
-const EventsOfWeek = ({ route }) => {
+const EventsOfWeek = ({ navigation, route }) => {
     const { username, groupName, initialEventData } = route.params;
     const [loadingEventData, setLoadingEventData] = useState(false);
     const [eventData, setEventData] = useState(initialEventData)
@@ -46,6 +46,17 @@ const EventsOfWeek = ({ route }) => {
             <StatusBar barStyle="light-content" backgroundColor="black" />
             
             <View style={styles.titleContainer}>
+                <TouchableOpacity
+                    onPress={() => navigation.goBack()}
+                    style={[styles.backButton, { position: 'absolute', left: 0, top: 52 }]}
+                >
+                    <MaterialIcons 
+                        name="arrow-back"
+                        size={44}
+                        color="white"
+                        alignSelf='center'
+                    />
+                </TouchableOpacity>
                 <Text style={styles.title}>TOP EVENTS OF THE WEEK</Text>
             </View>
             
@@ -75,7 +86,7 @@ const EventsOfWeek = ({ route }) => {
                                     
                                     let cardBackgroundColor;
                                     if (isTopEvent) {
-                                        cardBackgroundColor = '#FFD700'; // gold for top event
+                                        cardBackgroundColor = 'rgb(70, 233, 70)'; // gold for top event
                                     } else if (hasPositiveVotes) {
                                         cardBackgroundColor = '#d4f7d4'; // light green for positive votes
                                     } else if (hasNegativeVotes) {
@@ -106,6 +117,11 @@ const EventsOfWeek = ({ route }) => {
 
                                                 {/* Right Column: Vote Count */}
                                                 <View style={ styles.voteColumn }>
+                                                    {isTopEvent && (
+                                                        <View style={styles.starContainer}>
+                                                            <MaterialIcons name="star" size={32} color="black" />
+                                                        </View>
+                                                    )}
                                                     <Text style={styles.voteCount}>
                                                         {data.votes || 0}
                                                     </Text>
@@ -132,8 +148,8 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         backgroundColor: 'black',
         width: '100%',
-        height: 120,
-        paddingTop: 60
+        height: 150,
+        paddingTop: 90
     },
     title: {
         fontSize: 28,
@@ -173,6 +189,7 @@ const styles = StyleSheet.create({
     },
     voteColumn: {
         alignItems: 'center',
+        flexDirection: 'row',
     },
 // Container to add black circles around number, cannot fit to all numbers
 //   voteCountContainer: {
@@ -212,6 +229,21 @@ const styles = StyleSheet.create({
         fontSize: 14,
         color: '#666',
     },
+    starContainer: {
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginRight: 5,
+        marginLeft: 10,
+        marginTop: 4,
+    },
+    backButton: {
+        alignItems: 'center',
+        width: '20%',
+        backgroundColor: 'black',
+    },
+    backButtonText: {
+        color: 'white',
+    }
 });
 
 export default EventsOfWeek;

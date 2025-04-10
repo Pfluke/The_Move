@@ -120,8 +120,7 @@ const EventScreen = ({ navigation, route }) => {
             <TouchableOpacity
               style={styles.customButton}
               onPress={() => 
-                navigation.navigate('GroupScreen', { username }
-              )}
+                navigation.goBack()}
             >
               <MaterialIcons 
                 name="arrow-back"
@@ -241,7 +240,7 @@ const styles = StyleSheet.create({
   },
   dayButton: {
     padding: 13,
-    backgroundColor: 'black',
+    backgroundColor: '#444',
     borderRadius: 8,
     width: '93%', 
     alignItems: 'center',
@@ -277,6 +276,9 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: 'bold',
     textAlign: 'center',
+  },
+  todayButton: {
+    backgroundColor: 'black',
   },
 
 
