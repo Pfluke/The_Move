@@ -1,11 +1,14 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, TextInput, Alert, StyleSheet, ScrollView, TouchableOpacity, Keyboard, KeyboardAvoidingView, Platform, SafeAreaView, StatusBar, Modal } from 'react-native';
+import { View, Text, Image, TextInput, Alert, StyleSheet, ScrollView, TouchableOpacity, Keyboard, KeyboardAvoidingView, Platform, SafeAreaView, StatusBar, Modal } from 'react-native';
 // Firebase imports:
 import { 
   getFirestore, collection, query, where, onSnapshot, doc, updateDoc, 
   arrayUnion, setDoc, arrayRemove, deleteDoc, serverTimestamp, getDoc 
 } from 'firebase/firestore';
 import { app } from '../firebaseConfig'; // Adjust the import path as needed
+import ArrowsIcon from '../assets/arrowsiconupdated.png';
+
+
 
 // Initialize Firestore
 const db = getFirestore(app);
@@ -21,6 +24,7 @@ const GroupScreen = ({ navigation, route }) => {
   const [activeMenu, setActiveMenu] = useState(null); // state to track which group's menu is open
   const [editingGroupId, setEditingGroupId] = useState(null); // ID of group currently being edited
   const [showEditModal, setShowEditModal] = useState(false); // edit modal visibility 
+  const scrollViewRef = React.useRef(null);
   const [isKeyboardVisible, setKeyboardVisible] = useState(false); // Track keyboard visibility
 
   // Modal visibility states:
@@ -158,23 +162,40 @@ const GroupScreen = ({ navigation, route }) => {
   };
 
   const editGroupName = async (newName) => {
+    const trimmedName = newName.trim();
+  
+    // check if field is empty
+    if (!trimmedName) {
+      Alert.alert('Error', 'Group name cannot be empty.');
+      return;
+    }
+  
+    // check if group name is the same
+    if (trimmedName === editingGroupId) {
+      Alert.alert('Error', 'The new name is the same as the current name.');
+      return;
+    }
+  
     try {
+      // old document reference
       const groupRef = doc(db, "groups", editingGroupId);
-      const newGroupRef = doc(db, "groups", newName);
-      
-      // Get current group data
+
+      // new doc reference
+      const newGroupRef = doc(db, "groups", trimmedName);
+  
       const groupSnap = await getDoc(groupRef);
       const groupData = groupSnap.data();
-      
-      // Create new document with updated name
+  
+      // create new doc with updated name and same data for rest
       await setDoc(newGroupRef, {
         ...groupData,
-        id: newName
+        id: trimmedName
       });
-      
-      // Delete old document 
+  
+      // delete old group doc
       await deleteDoc(groupRef);
-      
+  
+      // reset modal and state
       setShowEditModal(false);
       setEditingGroupId(null);
       setGroupName('');
@@ -182,7 +203,8 @@ const GroupScreen = ({ navigation, route }) => {
       Alert.alert('Error', 'Failed to edit group name');
       console.error("Error editing group: ", error);
     }
-  };  
+  };
+  
   
   const createGroupFirestore = async (groupId, user, password) => {
     try {
@@ -283,196 +305,232 @@ const GroupScreen = ({ navigation, route }) => {
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: '#FFFFFF' }}>
       <StatusBar barStyle="dark-content" />
-        <KeyboardAvoidingView
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-          style={styles.container}
-          keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
-        >
-          {/* Scrollable Content */}
-          <ScrollView
-            contentContainerStyle={styles.scrollContainer}
-            keyboardShouldPersistTaps="handled"
-          >
-            {/* Error Message */}
-            {errorMessage && <Text style={styles.errorText}>{errorMessage}</Text>}
-
-            {/* Group List */}
-            <View style={styles.groupsList}>
-              {userGroups.length > 0 ? (
-                userGroups.map((group) => (
-                  <View key={group.id} style={styles.groupCard}>
-                    <View style={styles.groupCardHeader}>
-                      <Text style={styles.groupNameText} numberOfLines={1} ellipsizeMode="tail">
-                        Group: {group.id}
-                      </Text>
-                      <GroupContextMenu
-                        groupId={group.id}
-                        isCreator={creators[group.id] === username.toLowerCase()}
-                        onLeave={() => leaveGroup(group.id)}
-                        onEdit={() => {
-                          setGroupName(group.id);
-                          setShowEditModal(true);
-                          setEditingGroupId(group.id);
-                        }}
-                        onDelete={() => handleDeleteGroup(group.id)}
-                      />
-                    </View>
-                    <TouchableOpacity
-                      style={styles.actionButton}
-                      onPress={() => navigation.navigate('EventScreen', { username, groupName: group.id })}
-                    >
-                      <Text style={styles.actionButtonText}>
-                        Go to Group
-                      </Text>
-                    </TouchableOpacity>
-                  </View>
-                ))
-              ) : (
-                <Text style={styles.noGroupsText}>No groups found. Create or join a group!</Text>
-              )}
-            </View>
-          </ScrollView>
-
-          {/* Fixed Bottom Section with only buttons */}
-          <View style={[styles.bottomContainer, { bottom: isKeyboardVisible ? 325 : 0 }]}>
-            <View style={styles.horizontalButtonContainer}>
-              <TouchableOpacity style={styles.halfWidthButton} onPress={openJoinModal}>
-                <Text style={styles.buttonText}>JOIN</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.halfWidthButton} onPress={openCreateModal}>
-                <Text style={styles.buttonText}>CREATE</Text>
-              </TouchableOpacity>
-            </View>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={styles.container}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
+      >
+        {/* Top section with logo and join/create buttons */}
+        <View style={styles.topSection}>
+          <TouchableOpacity onPress={() => { // clickable logo, scroll back to top when click
+            scrollViewRef.current?.scrollTo({ y: 0, animated: true });
+          }}>
+            <Image source={ArrowsIcon} style={styles.logoImage} resizeMode="contain" />
+          </TouchableOpacity>
+  
+          {/* join/create buttons on the right */}
+          <View style={styles.verticalButtonContainer}>
+            <TouchableOpacity style={styles.verticalButton} onPress={openJoinModal}>
+              <Text style={styles.buttonText}>JOIN</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.verticalButton} onPress={openCreateModal}>
+              <Text style={styles.buttonText}>CREATE</Text>
+            </TouchableOpacity>
           </View>
-
-          {showEditModal && (
-            <Modal
-              transparent={true}
-              animationType="slide"
-              visible={showEditModal}
-              onRequestClose={() => setShowEditModal(false)}
-            >
-              <View style={styles.modalBackground}>
-                <View style={styles.modalContainer}>
-                  <Text style={styles.modalTitle}>Edit Group Name</Text>
-                  <TextInput
-                    style={styles.modalInput}
-                    placeholder="New Group Name"
-                    placeholderTextColor="#888"
-                    value={groupName}
-                    onChangeText={setGroupName}
-                    autoCapitalize="none"
-                    maxLength={20} // Prevent overly long names
-                  />
-                  <TouchableOpacity 
-                    style={styles.modalButton} 
-                    onPress={() => editGroupName(groupName)}
+        </View>
+  
+        {/* Scrollable Content */}
+        <ScrollView
+          ref={scrollViewRef} // scrolls back to top when click on logo
+          contentContainerStyle={styles.scrollContainer}
+          keyboardShouldPersistTaps="handled"
+        >
+          {/* Errors Message */}
+          {errorMessage && <Text style={styles.errorText}>{errorMessage}</Text>}
+  
+          {/* Group List */}
+          <View style={styles.groupsList}>
+            {userGroups.length > 0 ? (
+              userGroups.map((group) => (
+                <View key={group.id} style={styles.groupCard}>
+                  <View style={styles.groupCardHeader}>
+                    <Text style={styles.groupNameText} numberOfLines={1} ellipsizeMode="tail">
+                      {group.id}
+                    </Text>
+                    <GroupContextMenu
+                      groupId={group.id}
+                      isCreator={creators[group.id] === username.toLowerCase()}
+                      onLeave={() => leaveGroup(group.id)}
+                      onEdit={() => {
+                        setGroupName(group.id);
+                        setShowEditModal(true);
+                        setEditingGroupId(group.id);
+                      }}
+                      onDelete={() => handleDeleteGroup(group.id)}
+                    />
+                  </View>
+                  <TouchableOpacity
+                    style={styles.actionButton}
+                    onPress={() => navigation.navigate('EventScreen', { username, groupName: group.id })}
                   >
-                    <Text style={styles.buttonText}>SAVE CHANGES</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity 
-                    style={[styles.modalButton, styles.modalCancelButton]} 
-                    onPress={() => setShowEditModal(false)}
-                  >
-                    <Text style={styles.buttonText}>Cancel</Text>
+                    <Text style={styles.actionButtonText}>
+                      Go to Group
+                    </Text>
                   </TouchableOpacity>
                 </View>
+              ))
+            ) : (
+              <Text style={styles.noGroupsText}>No groups found. Create or join a group!</Text>
+            )}
+          </View>
+        </ScrollView>
+  
+        {/* Edit Group Modal */}
+        {showEditModal && (
+          <Modal
+            transparent={true}
+            animationType="slide"
+            visible={showEditModal}
+            onRequestClose={() => setShowEditModal(false)}
+          >
+            <View style={styles.modalBackground}>
+              <View style={styles.modalContainer}>
+                <Text style={styles.modalTitle}>Edit Group Name</Text>
+                <TextInput
+                  style={styles.modalInput}
+                  placeholder="New Group Name"
+                  placeholderTextColor="#888"
+                  value={groupName}
+                  onChangeText={setGroupName}
+                  autoCapitalize="none"
+                  maxLength={20} // Prevent overly long names
+                />
+                <TouchableOpacity 
+                  style={styles.modalButton} 
+                  onPress={() => editGroupName(groupName)}
+                >
+                  <Text style={styles.buttonText}>SAVE CHANGES</Text>
+                </TouchableOpacity>
+                <TouchableOpacity 
+                  style={[styles.modalButton, styles.modalCancelButton]} 
+                  onPress={() => setShowEditModal(false)}
+                >
+                  <Text style={styles.buttonText}>Cancel</Text>
+                </TouchableOpacity>
               </View>
-            </Modal>
-          )}
-
-          {/* Join Group Modal */}
-          {showJoinModal && (
-            <Modal
-              transparent={true}
-              animationType="slide"
-              visible={showJoinModal}
-              onRequestClose={() => setShowJoinModal(false)}
-            >
-              <View style={styles.modalBackground}>
-                <View style={styles.modalContainer}>
-                  <Text style={styles.modalTitle}>Join Group</Text>
-                  <TextInput
-                    style={styles.modalInput}
-                    placeholder="Enter Group Name"
-                    placeholderTextColor="#888"
-                    value={groupName}
-                    onChangeText={(text) => setGroupName(text.slice(0, 20))} // Limit to 20 characters
-                    maxLength={20} // Double protection
-                  />
-                  <TextInput
-                    style={styles.modalInput}
-                    placeholder="Enter Group Password"
-                    placeholderTextColor="#888"
-                    value={groupPassword}
-                    onChangeText={setGroupPassword}
-                    secureTextEntry={true}
-                  />
-                  <TouchableOpacity style={styles.modalButton} onPress={onJoinModalSubmit}>
-                    <Text style={styles.buttonText}>JOIN GROUP</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity 
-                    style={[styles.modalButton, { marginTop: 10, backgroundColor: '#aaa' }]} 
-                    onPress={() => setShowJoinModal(false)}
-                  >
-                    <Text style={styles.buttonText}>Cancel</Text>
-                  </TouchableOpacity>
-                </View>
+            </View>
+          </Modal>
+        )}
+  
+        {/* Join Group Modal */}
+        {showJoinModal && (
+          <Modal
+            transparent={true}
+            animationType="slide"
+            visible={showJoinModal}
+            onRequestClose={() => setShowJoinModal(false)}
+          >
+            <View style={styles.modalBackground}>
+              <View style={styles.modalContainer}>
+                <Text style={styles.modalTitle}>Join Group</Text>
+                <TextInput
+                  style={styles.modalInput}
+                  placeholder="Enter Group Name"
+                  placeholderTextColor="#888"
+                  value={groupName}
+                  onChangeText={(text) => setGroupName(text.slice(0, 20))} // Limit to 20 characters
+                  maxLength={20} // Double protection
+                />
+                <TextInput
+                  style={styles.modalInput}
+                  placeholder="Enter Group Password"
+                  placeholderTextColor="#888"
+                  value={groupPassword}
+                  onChangeText={setGroupPassword}
+                  secureTextEntry={true}
+                />
+                <TouchableOpacity style={styles.modalButton} onPress={onJoinModalSubmit}>
+                  <Text style={styles.buttonText}>JOIN GROUP</Text>
+                </TouchableOpacity>
+                <TouchableOpacity 
+                  style={[styles.modalButton, { marginTop: 10, backgroundColor: '#aaa' }]} 
+                  onPress={() => setShowJoinModal(false)}
+                >
+                  <Text style={styles.buttonText}>Cancel</Text>
+                </TouchableOpacity>
               </View>
-            </Modal>
-          )}
-
-          {/* Create Group Modal */}
-          {showCreateModal && (
-            <Modal
-              transparent={true}
-              animationType="slide"
-              visible={showCreateModal}
-              onRequestClose={() => setShowCreateModal(false)}
-            >
-              <View style={styles.modalBackground}>
-                <View style={styles.modalContainer}>
-                  <Text style={styles.modalTitle}>Create Group</Text>
-                  <TextInput
-                    style={styles.modalInput}
-                    placeholder="Enter Group Name"
-                    placeholderTextColor="#888"
-                    value={groupName}
-                    onChangeText={(text) => setGroupName(text.slice(0, 20))} // Limit to 20 characters
-                    maxLength={20} // Double protection
-                  />
-                  <TextInput
-                    style={styles.modalInput}
-                    placeholder="Enter Group Password"
-                    placeholderTextColor="#888"
-                    value={groupPassword}
-                    onChangeText={setGroupPassword}
-                    secureTextEntry={true}
-                  />
-                  <TouchableOpacity style={styles.modalButton} onPress={onCreateModalSubmit}>
-                    <Text style={styles.buttonText}>CREATE GROUP</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity 
-                    style={[styles.modalButton, { marginTop: 10, backgroundColor: '#aaa' }]} 
-                    onPress={() => setShowCreateModal(false)}
-                  >
-                    <Text style={styles.buttonText}>Cancel</Text>
-                  </TouchableOpacity>
-                </View>
+            </View>
+          </Modal>
+        )}
+  
+        {/* Create Group Modal */}
+        {showCreateModal && (
+          <Modal
+            transparent={true}
+            animationType="slide"
+            visible={showCreateModal}
+            onRequestClose={() => setShowCreateModal(false)}
+          >
+            <View style={styles.modalBackground}>
+              <View style={styles.modalContainer}>
+                <Text style={styles.modalTitle}>Create Group</Text>
+                <TextInput
+                  style={styles.modalInput}
+                  placeholder="Enter Group Name"
+                  placeholderTextColor="#888"
+                  value={groupName}
+                  onChangeText={(text) => setGroupName(text.slice(0, 20))} // Limit to 20 characters
+                  maxLength={20} // Double protection
+                />
+                <TextInput
+                  style={styles.modalInput}
+                  placeholder="Enter Group Password"
+                  placeholderTextColor="#888"
+                  value={groupPassword}
+                  onChangeText={setGroupPassword}
+                  secureTextEntry={true}
+                />
+                <TouchableOpacity style={styles.modalButton} onPress={onCreateModalSubmit}>
+                  <Text style={styles.buttonText}>CREATE GROUP</Text>
+                </TouchableOpacity>
+                <TouchableOpacity 
+                  style={[styles.modalButton, { marginTop: 10, backgroundColor: '#aaa' }]} 
+                  onPress={() => setShowCreateModal(false)}
+                >
+                  <Text style={styles.buttonText}>Cancel</Text>
+                </TouchableOpacity>
               </View>
-            </Modal>
-          )}
-
-        </KeyboardAvoidingView>
+            </View>
+          </Modal>
+        )}
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
-};
+}
+  
 
 const styles = StyleSheet.create({
   container: { // background color 
     flex: 1,
     backgroundColor: '#FFFFFF',
   },
+  
+  // top section styles
+  topSection: { // top container
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 15,
+    backgroundColor: '#FFFFFF',
+    justifyContent: 'flex-start',
+  },
+  logoImage: { // logo 
+    width: 75,
+    height: 75,
+    marginRight: 15,
+  },
+  verticalButtonContainer: {
+    justifyContent: 'space-between',
+    height: 100, // spacing between buttons
+  },
+  verticalButton: {
+    backgroundColor: '#000000',
+    paddingVertical: 12,
+    paddingHorizontal: 101,
+    borderRadius: 10,
+    marginBottom: 10,
+    alignItems: 'center',
+  },  
+
   scrollContainer: { // styling for scroll function, how much space there is at the bottom of the container after scrolling
     flexGrow: 1,
     paddingBottom: 90,
@@ -521,26 +579,6 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     textAlign: 'center',
   },
-  // leaveButton: { // leave button styling
-  //   backgroundColor: '#FF0000',
-  //   paddingVertical: 10,
-  //   paddingHorizontal: 20,
-  //   borderRadius: 5,
-  //   marginBottom: 5,
-  // },
-  // leaveButtonText: { // leave button text
-  //   fontSize: 16,
-  //   fontWeight: 'bold',
-  //   color: '#FFFFFF',
-  // },
-  // deleteButton: { // button for deleting group 
-  //   backgroundColor: '#FFCCCC',
-  //   paddingVertical: 10,
-  //   paddingHorizontal: 20,
-  //   borderRadius: 5,
-  //   marginTop: 10,
-  //   alignItems: 'center',
-  // },
   deleteButtonText: { // text for deleting group
     fontSize: 16,
     fontWeight: 'bold',
@@ -592,6 +630,7 @@ const styles = StyleSheet.create({
   contextMenuItemText: { // text styling for items in dropdown menu
     fontSize: 16,
     color: '#333',
+    alignItems: 'center',
   },
   contextMenuDeleteText: { // text styling for the delete text in dropdown menu to be red
     fontSize: 16,
@@ -608,36 +647,17 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 8, // Space between header and content
   }, 
-
-  // Modal Styles
-  modalCancelButton: {
-    marginTop: 10, 
-    backgroundColor: '#aaa' // Gray cancel button
-  },
-  bottomContainer: { // fixes styling for the join and create buttons 
-    width: '100%',
-    padding: 20,
-    backgroundColor: '#FFFFFF',
-    position: 'absolute',
-    left: 0,
-    right: 0,
-  },
-  horizontalButtonContainer: { // contains the join and create buttons
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    width: '100%',
-  },
-  halfWidthButton: { // button styling for the half widths at the bottom
-    backgroundColor: '#000000',
-    paddingVertical: 15,
-    borderRadius: 10,
-    width: '47%', 
-    alignItems: 'center',
-  },
+  
   buttonText: { // font for join/create buttons, also used in the modal
     fontSize: 17,
     fontWeight: 'bold',
     color: '#FFFFFF',
+  },
+
+  // modal Styles
+  modalCancelButton: {
+    marginTop: 10, 
+    backgroundColor: '#aaa' // Gray cancel button
   },
   modalButton: { // modal buttons for joining and canceling
     backgroundColor: '#000000',
