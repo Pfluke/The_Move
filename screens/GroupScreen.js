@@ -318,7 +318,7 @@ const GroupScreen = ({ navigation, route }) => {
             <Image source={ArrowsIcon} style={styles.logoImage} resizeMode="contain" />
           </TouchableOpacity>
   
-          {/* JOIN/CREATE buttons stacked vertically to the right */}
+          {/* join/create buttons on the right */}
           <View style={styles.verticalButtonContainer}>
             <TouchableOpacity style={styles.verticalButton} onPress={openJoinModal}>
               <Text style={styles.buttonText}>JOIN</Text>
@@ -647,27 +647,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 8, // Space between header and content
   }, 
-
-  // bottomContainer: { // fixes styling for the join and create buttons 
-  //   width: '100%',
-  //   padding: 20,
-  //   backgroundColor: '#FFFFFF',
-  //   position: 'absolute',
-  //   left: 0,
-  //   right: 0,
-  // },
-  // horizontalButtonContainer: { // contains the join and create buttons
-  //   flexDirection: 'row',
-  //   justifyContent: 'space-between',
-  //   width: '100%',
-  // },
-  // halfWidthButton: { // button styling for the half widths at the bottom
-  //   backgroundColor: '#000000',
-  //   paddingVertical: 15,
-  //   borderRadius: 10,
-  //   width: '47%', 
-  //   alignItems: 'center',
-  // },
+  
   buttonText: { // font for join/create buttons, also used in the modal
     fontSize: 17,
     fontWeight: 'bold',
