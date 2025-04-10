@@ -158,23 +158,40 @@ const GroupScreen = ({ navigation, route }) => {
   };
 
   const editGroupName = async (newName) => {
+    const trimmedName = newName.trim();
+  
+    // check if field is empty
+    if (!trimmedName) {
+      Alert.alert('Error', 'Group name cannot be empty.');
+      return;
+    }
+  
+    // check if group name is the same
+    if (trimmedName === editingGroupId) {
+      Alert.alert('Error', 'The new name is the same as the current name.');
+      return;
+    }
+  
     try {
+      // old document reference
       const groupRef = doc(db, "groups", editingGroupId);
-      const newGroupRef = doc(db, "groups", newName);
-      
-      // Get current group data
+
+      // new doc reference
+      const newGroupRef = doc(db, "groups", trimmedName);
+  
       const groupSnap = await getDoc(groupRef);
       const groupData = groupSnap.data();
-      
-      // Create new document with updated name
+  
+      // create new doc with updated name and same data for rest
       await setDoc(newGroupRef, {
         ...groupData,
-        id: newName
+        id: trimmedName
       });
-      
-      // Delete old document 
+  
+      // delete old group doc
       await deleteDoc(groupRef);
-      
+  
+      // reset modal and state
       setShowEditModal(false);
       setEditingGroupId(null);
       setGroupName('');
@@ -182,7 +199,8 @@ const GroupScreen = ({ navigation, route }) => {
       Alert.alert('Error', 'Failed to edit group name');
       console.error("Error editing group: ", error);
     }
-  };  
+  };
+  
   
   const createGroupFirestore = async (groupId, user, password) => {
     try {
@@ -303,7 +321,7 @@ const GroupScreen = ({ navigation, route }) => {
                   <View key={group.id} style={styles.groupCard}>
                     <View style={styles.groupCardHeader}>
                       <Text style={styles.groupNameText} numberOfLines={1} ellipsizeMode="tail">
-                        Group: {group.id}
+                        3{group.id}
                       </Text>
                       <GroupContextMenu
                         groupId={group.id}
@@ -592,6 +610,7 @@ const styles = StyleSheet.create({
   contextMenuItemText: { // text styling for items in dropdown menu
     fontSize: 16,
     color: '#333',
+    alignItems: 'center',
   },
   contextMenuDeleteText: { // text styling for the delete text in dropdown menu to be red
     fontSize: 16,
