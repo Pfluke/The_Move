@@ -217,7 +217,15 @@ const EventsOfWeek = ({ navigation, route }) => {
                     }
 
                     return (
-                      <View key={eventKey} style={[styles.cardContainer, { backgroundColor: cardBackgroundColor }]}>
+                      <TouchableOpacity
+                        key={eventKey}
+                        style={[styles.cardContainer, { backgroundColor: cardBackgroundColor }]}
+                        onPress={() => navigation.navigate('Event', {
+                          groupName,
+                          sliceName: eventKey,
+                          username,
+                        })}
+                      >
                         <View style={styles.cardContentRow}>
                           <View style={styles.eventDetailsColumn}>
                             <Text style={styles.cardTitle}>{eventKey}</Text>
@@ -248,8 +256,9 @@ const EventsOfWeek = ({ navigation, route }) => {
                             <MaterialIcons name="thumb-down" size={28} color="black" />
                           </TouchableOpacity>
                         </View>
-                      </View>
+                      </TouchableOpacity>
                     );
+                    
                   })}
               </View>
             )}
@@ -306,7 +315,10 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     padding: 10,
     flexDirection: 'column',
+    borderWidth: 0.5, // Added border width
+    borderColor: 'black', // Added border color
   },
+  
   cardContentRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',

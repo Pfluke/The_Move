@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import {
-  View, Text, StyleSheet, ScrollView, Button,
-  ImageBackground, Alert, ActivityIndicator
+  View, Text, StyleSheet, ScrollView, Alert, ActivityIndicator, TouchableOpacity, StatusBar
 } from 'react-native';
 import { getFirestore, doc, getDoc } from 'firebase/firestore';
 import { app } from '../firebaseConfig';
+import { MaterialIcons } from '@expo/vector-icons';
+
 
 const db = getFirestore(app);
 
@@ -12,6 +13,10 @@ const Event = ({ route, navigation }) => {
   const { groupName, sliceName, username } = route.params;
   const [eventData, setEventData] = useState(null);
   const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+      navigation.setOptions({ headerShown: false });
+    }, [navigation]);
 
   useEffect(() => {
     const fetchEventData = async () => {
@@ -44,90 +49,140 @@ const Event = ({ route, navigation }) => {
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" />
-        <Text>Loading event...</Text>
+        <ActivityIndicator size="large" color="#000" />
+        <Text style={styles.loadingText}>Loading event...</Text>
       </View>
     );
   }
 
   if (!eventData) {
-    return <Text>No event data available.</Text>;
+    return <Text style={styles.errorText}>No event data available.</Text>;
   }
 
   return (
-    <ScrollView contentContainerStyle={styles.container}>
-      {/* Event Image with Title if imageUri exists */}
-      {eventData.imageUri ? (
-        <ImageBackground
-          source={{ uri: eventData.imageUri }}
-          style={styles.imageBackground}
-          imageStyle={styles.imageStyle}
-        >
-          <Text style={styles.imageText}>{sliceName}</Text>
-        </ImageBackground>
-      ) : null}
+  <View style={{ flex: 1, backgroundColor: "black" }}>
+    <StatusBar barStyle="light-content" backgroundColor="black" />
+    
+    <View style={styles.titleContainer}>
+      <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+        <MaterialIcons name="arrow-back" size={44} color="white" />
+      </TouchableOpacity>
+      <Text style={styles.title}>{sliceName.toUpperCase()}</Text>
+    </View>
 
-      {/* Event Details */}
-      <View style={styles.eventDetails}>
-        <Text style={styles.description}>{eventData.description}</Text>
-        <Text style={styles.time}>
-          {eventData.startTime} - {eventData.endTime}
-        </Text>
-        <Text style={styles.days}>
-          {eventData.days?.join(', ') || 'No days assigned'}
-        </Text>
-      </View>
+    <View style={{ flex: 1 }}>
+      <ScrollView contentContainerStyle={styles.container}>
+        <View style={styles.card}>
+          <Text style={styles.cardTitle}>Description:</Text>
+          <Text style={styles.cardContent}>{eventData.description}</Text>
 
-      <Button title="Go to Group Screen" onPress={() => navigation.navigate('GroupScreen', { username })} />
-    </ScrollView>
-  );
+          <Text style={styles.cardTitle}>Time:</Text>
+          <Text style={styles.cardContent}>
+            {eventData.startTime} - {eventData.endTime}
+          </Text>
+
+          <Text style={styles.cardTitle}>Days:</Text>
+          <Text style={styles.cardContent}>
+            {eventData.days?.join(', ') || 'No days assigned'}
+          </Text>
+        </View>
+      </ScrollView>
+
+      <TouchableOpacity
+        style={styles.button}
+        onPress={() => navigation.navigate('EventScreen', { username, groupName })}
+      >
+        <Text style={styles.buttonText}>Back to Group</Text>
+      </TouchableOpacity>
+    </View>
+  </View>
+);
+
 };
 
 const styles = StyleSheet.create({
+  titleContainer: {
+    alignItems: 'center',
+    backgroundColor: 'black',
+    width: '100%',
+    height: 150,
+    paddingTop: 90,
+  },
+  title: {
+    fontSize: 28,
+    fontWeight: 'bold',
+    marginVertical: 10,
+    textAlign: 'center',
+    color: 'white',
+  },
+  backButton: {
+    position: 'absolute',
+    left: 0,
+    top: 52,
+    width: 60,
+    paddingLeft: 10,
+  },
+  
   container: {
-    paddingBottom: 20,
+    padding: 16,
+    paddingBottom: 32,
+    backgroundColor: '#fff',
   },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    backgroundColor: '#fff',
   },
-  imageBackground: {
-    width: '100%',
-    height: 220,
-    justifyContent: 'flex-end',
-    alignItems: 'center',
-    paddingBottom: 20,
-    marginBottom: 16,
-  },
-  imageStyle: {
-    resizeMode: 'cover',
-    opacity: 0.75,
-  },
-  imageText: {
-    color: 'white',
-    fontSize: 26,
-    fontWeight: 'bold',
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    paddingHorizontal: 12,
-    paddingVertical: 4,
-    borderRadius: 8,
-  },
-  eventDetails: {
-    paddingHorizontal: 20,
-  },
-  description: {
-    fontSize: 18,
-    marginBottom: 10,
-  },
-  time: {
+  loadingText: {
+    marginTop: 10,
     fontSize: 16,
     color: '#333',
-    marginBottom: 6,
   },
-  days: {
+  errorText: {
+    textAlign: 'center',
+    marginTop: 50,
     fontSize: 16,
-    color: '#666',
+    color: '#333',
+  },
+  sliceTitle: {
+    fontSize: 26,
+    fontWeight: '700',
+    textAlign: 'center',
+    marginBottom: 20,
+    color: '#000',
+  },
+  card: {
+    backgroundColor: '#fff',
+    borderColor: '#000',
+    borderWidth: 1.2,
+    borderRadius: 16,
+    padding: 20,
+    marginBottom: 20,
+  },
+  cardTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    marginBottom: 6,
+    color: '#000',
+  },
+  cardContent: {
+    fontSize: 16,
+    color: '#111',
+    marginBottom: 14,
+  },
+  button: {
+    backgroundColor: '#000',
+    paddingVertical: 12,
+    borderRadius: 12,
+    alignItems: 'center',
+    borderWidth: 0.5, // Added border width
+    borderColor: 'white', // Added border color
+  },
+  buttonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
   },
 });
 
