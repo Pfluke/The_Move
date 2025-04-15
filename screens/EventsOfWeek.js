@@ -239,9 +239,6 @@ const EventsOfWeek = ({ navigation, route }) => {
                           {/* Left column: Event title, image, details */}
                           <View style={styles.eventDetailsColumn}>
                             <Text style={styles.cardTitle}>{eventKey}</Text>
-                            {data.imageUri && (
-                              <Image source={{ uri: data.imageUri }} style={styles.cardImage} />
-                            )}
                             <Text style={styles.cardDetails}>
                               {data.days ? data.days.join(", ") : "No day assigned"} | {data.startTime} - {data.endTime}
                             </Text>
