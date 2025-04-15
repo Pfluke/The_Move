@@ -4,96 +4,87 @@ import {
   Image, KeyboardAvoidingView, Platform, SafeAreaView, StatusBar 
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
-
-// Firebase imports:
-import { getFirestore, doc, setDoc, updateDoc, getDoc } from 'firebase/firestore';
+import { getFirestore, doc, setDoc, updateDoc, getDoc, onSnapshot } from 'firebase/firestore';
 import { app } from '../firebaseConfig';
 
 const db = getFirestore(app);
 
 const EventsOfWeek = ({ navigation, route }) => {
-  const { username, groupName, initialEventData } = route.params;
+  const { selectedDay, username, groupName, initialEventData } = route.params;
   const [loadingEventData, setLoadingEventData] = useState(false);
-  const [eventData, setEventData] = useState(initialEventData);
+  const [eventData, setEventData] = useState([]);
 
-  // Reference to the group document.
   const groupDocRef = doc(db, "groups", groupName);
 
   useEffect(() => {
-    if (!eventData) {
-      setLoadingEventData(true);
-    } else {
-      setLoadingEventData(false);
+    if (selectedDay === "WEEK") {
+      setEventData(initialEventData);
+      return;
     }
+
+    const unsubscribe = onSnapshot(groupDocRef, (docSnap) => {
+      if (docSnap.exists()) {
+        const slices = docSnap.data()?.slices || {};
+
+        const filtered = Object.entries(slices).filter(
+          ([, sliceData]) => sliceData.days?.includes(selectedDay)
+        );
+
+        setEventData(Object.fromEntries(filtered));
+      } else {
+        Alert.alert("Error", "Group not found");
+      }
+    });
+
+    return () => unsubscribe();
+  }, [selectedDay, groupName]);
+
+  useEffect(() => {
+    setLoadingEventData(!eventData);
   }, [eventData]);
 
-  if (loadingEventData) {
-    return <Text>Loading events...</Text>;
-  }
-
-  // Helper: Retrieve the user's current vote (if any) on an event.
   const getUserVote = (eventKey) => {
     const evt = eventData[eventKey] || {};
     return evt.voters ? evt.voters[username] : 0;
   };
 
-  // Helper: Get the event with the most votes.
-  const getEventWithMostVotes = () => { 
+  const getEventWithMostVotes = () => {
     let maxVotes = -Infinity;
-    let eventWithMostVotes = null;
-  
-    Object.entries(eventData).forEach(([eventKey, sliceData]) => {
-      if ((sliceData.votes || 0) > maxVotes) {
-        maxVotes = sliceData.votes;
-        eventWithMostVotes = eventKey;
+    let topEvent = null;
+    Object.entries(eventData).forEach(([key, slice]) => {
+      if ((slice.votes || 0) > maxVotes) {
+        maxVotes = slice.votes;
+        topEvent = key;
       }
     });
-  
-    return eventWithMostVotes;
+    return topEvent;
   };
 
   const eventWithMostVotes = getEventWithMostVotes();
 
-  // Handle vote action:
-  // Users can vote (like/dislike) on each event—change their vote or remove it,
-  // and the user is allowed only one like and one dislike per day.
   const handleVote = async (eventKey, voteValue) => {
     const eventItem = eventData[eventKey];
     if (!eventItem) return;
 
-    // Determine current vote and compute new vote.
-    const currentVote = (eventItem.voters && eventItem.voters[username]) || 0;
+    const currentVote = eventItem.voters?.[username] || 0;
     const newVote = currentVote === voteValue ? 0 : voteValue;
     const voteDiff = newVote - currentVote;
 
-    // If adding a new vote (or changing to a different vote), check per-day limits.
-    // This check is skipped if the vote is being removed (newVote === 0).
     if (newVote !== 0) {
-      // Make a lowercase copy of days for the current event.
-      const currentDays = eventItem.days ? eventItem.days.map(day => day.toLowerCase()) : [];
-      // For each event other than the current one:
+      const currentDays = eventItem.days?.map(day => day.toLowerCase()) || [];
       for (const [otherKey, otherEvent] of Object.entries(eventData)) {
         if (otherKey === eventKey) continue;
-        const otherUserVote = (otherEvent.voters && otherEvent.voters[username]) || 0;
-        // If the user has already voted the same way on the other event…
-        if (otherUserVote === newVote) {
-          // Get the days for the other event.
-          const otherDays = otherEvent.days ? otherEvent.days.map(day => day.toLowerCase()) : [];
-          // Check if there is any overlap.
-          const intersectingDays = currentDays.filter(day => otherDays.includes(day));
-          if (intersectingDays.length > 0) {
-            const conflictDay = intersectingDays[0];
-            Alert.alert(
-              "Voting Error",
-              `You've already used your ${newVote === 1 ? "like" : "dislike"} for ${conflictDay.charAt(0).toUpperCase() + conflictDay.slice(1)}.`
-            );
+        const otherVote = otherEvent.voters?.[username] || 0;
+        if (otherVote === newVote) {
+          const overlap = currentDays.filter(day => otherEvent.days?.map(d => d.toLowerCase())?.includes(day));
+          if (overlap.length > 0) {
+            Alert.alert("Voting Error", `You've already used your ${newVote === 1 ? "like" : "dislike"} for ${overlap[0]}`);
             return;
           }
         }
       }
     }
 
-    // Update local state immediately.
     setEventData(prev => ({
       ...prev,
       [eventKey]: {
@@ -106,125 +97,84 @@ const EventsOfWeek = ({ navigation, route }) => {
       }
     }));
 
-    // Update Firebase.
     try {
-      // Get the current group document snapshot.
       const groupSnap = await getDoc(groupDocRef);
-      if (!groupSnap.exists()) {
-        await setDoc(groupDocRef, { slices: {} });
-      }
-      // Retrieve a fresh snapshot.
-      const groupData = (await getDoc(groupDocRef)).data();
-      const sliceData = groupData.slices ? groupData.slices[eventKey] : null;
-      // Use Firebase data if it exists; otherwise, fall back to our local eventItem.
-      const currentSliceData = sliceData || {
-        votes: eventItem.votes || 0,
-        voters: eventItem.voters || {},
-        days: eventItem.days || [],
-        startTime: eventItem.startTime || '',
-        endTime: eventItem.endTime || '',
-        imageUri: eventItem.imageUri || '',
-        description: eventItem.description || '',
-      };
+      if (!groupSnap.exists()) await setDoc(groupDocRef, { slices: {} });
 
-      const currentVotes = currentSliceData.votes || 0;
-      const currentVoters = currentSliceData.voters || {};
-      const userCurrentVote = currentVoters[username] || 0;
-      let newVotes, updatedVoters;
+      const fresh = (await getDoc(groupDocRef)).data();
+      const slice = fresh?.slices?.[eventKey] || eventItem;
 
-      if (userCurrentVote === voteValue) {
-        // If toggling the same vote, remove it.
-        newVotes = currentVotes - voteValue;
-        updatedVoters = { ...currentVoters };
+      const currVotes = slice.votes || 0;
+      const currVoters = slice.voters || {};
+      const userVote = currVoters[username] || 0;
+
+      let updatedVotes, updatedVoters;
+
+      if (userVote === voteValue) {
+        updatedVotes = currVotes - voteValue;
+        updatedVoters = { ...currVoters };
         delete updatedVoters[username];
       } else {
-        // Otherwise, update the vote.
-        newVotes = currentVotes + voteValue - userCurrentVote;
-        updatedVoters = { ...currentVoters, [username]: voteValue };
+        updatedVotes = currVotes + voteValue - userVote;
+        updatedVoters = { ...currVoters, [username]: voteValue };
       }
 
       await updateDoc(groupDocRef, {
         [`slices.${eventKey}`]: {
-          ...currentSliceData,
-          votes: newVotes,
+          ...slice,
+          votes: updatedVotes,
           voters: updatedVoters,
         }
       });
-    } catch (error) {
-      console.error("Error updating vote:", error);
-      Alert.alert("Error", "Failed to update your vote. Please try again.");
+    } catch (err) {
+      console.error(err);
+      Alert.alert("Error", "Failed to update your vote. Try again.");
     }
   };
 
+  if (loadingEventData) return <Text>Loading events...</Text>;
+
   return (
-    <View style={{ flex: 1, backgroundColor:"black" }}>
+    <View style={{ flex: 1, backgroundColor: "black" }}>
       <StatusBar barStyle="light-content" backgroundColor="black" />
-      
       <View style={styles.titleContainer}>
-        <TouchableOpacity
-          onPress={() => navigation.goBack()}
-          style={[styles.backButton, { position: 'absolute', left: 0, top: 52 }]}
-        >
-          <MaterialIcons 
-            name="arrow-back"
-            size={44}
-            color="white"
-            alignSelf='center'
-          />
+        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+          <MaterialIcons name="arrow-back" size={44} color="white" />
         </TouchableOpacity>
-        <Text style={styles.title}>TOP EVENTS OF THE WEEK</Text>
+        <Text style={styles.title}>
+          TOP EVENTS OF {selectedDay === "WEEK" ? "THE WEEK" : selectedDay?.toUpperCase() || "THE WEEK"}
+        </Text>
       </View>
-      
-      <SafeAreaView style={{ flex: 1}}>
-        <KeyboardAvoidingView
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-          style={{ flex: 1, backgroundColor: 'white' }}
-          keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
-        >
-          <ScrollView 
-            contentContainerStyle={styles.scrollContainer}
-            keyboardShouldPersistTaps="handled"
-          >      
-            {eventData && Object.keys(eventData).length === 0 ? (
+      <SafeAreaView style={{ flex: 1 }}>
+        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
+          <ScrollView contentContainerStyle={styles.scrollContainer} keyboardShouldPersistTaps="handled">
+            {Object.keys(eventData).length === 0 ? (
               <Text style={styles.noEventsText}>NO EVENTS CURRENTLY SCHEDULED</Text>
             ) : (
               <View style={styles.EventDataList}>
                 {Object.entries(eventData)
                   .sort(([, a], [, b]) => (b.votes || 0) - (a.votes || 0))
                   .map(([eventKey, data]) => {
-                    const userVote = getUserVote(eventKey);  
-
-                    // Determine card background color.
+                    const userVote = getUserVote(eventKey);
                     const isTopEvent = eventKey === eventWithMostVotes;
-                    const hasPositiveVotes = data.votes > 0;
-                    const hasNegativeVotes = data.votes < 0;
-                    
-                    let cardBackgroundColor;
-                    if (isTopEvent) {
-                      cardBackgroundColor = 'rgb(70, 233, 70)';
-                    } else if (hasPositiveVotes) {
-                      cardBackgroundColor = '#d4f7d4';
-                    } else if (hasNegativeVotes) {
-                      cardBackgroundColor = '#ffdddd';
-                    } else {
-                      cardBackgroundColor = '#FFF';
-                    }
+                    const bgColor = isTopEvent
+                      ? 'rgb(70, 233, 70)'
+                      : data.votes > 0
+                      ? '#d4f7d4'
+                      : data.votes < 0
+                      ? '#ffdddd'
+                      : '#fff';
 
                     return (
-                      <View key={eventKey} style={[styles.cardContainer, { backgroundColor: cardBackgroundColor }]}>
+                      <View key={eventKey} style={[styles.cardContainer, { backgroundColor: bgColor }]}>
                         <View style={styles.cardContentRow}>
-                          {/* Left column: Event title, image, details */}
                           <View style={styles.eventDetailsColumn}>
                             <Text style={styles.cardTitle}>{eventKey}</Text>
-                            {data.imageUri && (
-                              <Image source={{ uri: data.imageUri }} style={styles.cardImage} />
-                            )}
+                            {data.imageUri && <Image source={{ uri: data.imageUri }} style={styles.cardImage} />}
                             <Text style={styles.cardDetails}>
-                              {data.days ? data.days.join(", ") : "No day assigned"} | {data.startTime} - {data.endTime}
+                              {data.days?.join(", ") || "No day assigned"} | {data.startTime} - {data.endTime}
                             </Text>
                           </View>
-
-                          {/* Right column: Vote count and top event star */}
                           <View style={styles.voteColumn}>
                             {isTopEvent && (
                               <View style={styles.starContainer}>
@@ -234,7 +184,6 @@ const EventsOfWeek = ({ navigation, route }) => {
                             <Text style={styles.voteCount}>{data.votes || 0}</Text>
                           </View>
                         </View>
-                        {/* Voting buttons */}
                         <View style={styles.votingButtonsContainer}>
                           <TouchableOpacity 
                             onPress={() => handleVote(eventKey, 1)}
@@ -251,7 +200,7 @@ const EventsOfWeek = ({ navigation, route }) => {
                         </View>
                       </View>
                     );
-                })}
+                  })}
               </View>
             )}
           </ScrollView>
@@ -280,6 +229,19 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     color: 'white',
   },
+  backButton: {
+    position: 'absolute',
+    left: 0,
+    top: 52,
+    width: 60,
+    paddingLeft: 10,
+  },
+  noEventsText: {
+    fontSize: 16,
+    color: '#000',
+    textAlign: 'center',
+    marginTop: 20,
+  },
   EventDataList: {
     width: '100%',
     padding: 10,
@@ -294,15 +256,14 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     padding: 10,
     flexDirection: 'column',
-  },
+},
   cardContentRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'flex-start',
   },
   eventDetailsColumn: {
     flex: 3,
-    paddingLeft: 10,
+    paddingRight: 10,
   },
   voteColumn: {
     alignItems: 'center',
@@ -310,10 +271,10 @@ const styles = StyleSheet.create({
   },
   voteCount: {
     fontSize: 32,
-    color: 'black',
     fontWeight: 'bold',
     marginRight: 12,
     marginTop: 4,
+    color: 'black',
   },
   cardTitle: {
     fontSize: 28,
@@ -333,20 +294,8 @@ const styles = StyleSheet.create({
   starContainer: {
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 5,
-    marginLeft: 10,
+    marginHorizontal: 5,
     marginTop: 4,
-  },
-  backButton: {
-    alignItems: 'center',
-    width: '20%',
-    backgroundColor: 'black',
-  },
-  noEventsText: {
-    fontSize: 16,
-    color: '#000',
-    textAlign: 'center',
-    marginTop: 20,
   },
   votingButtonsContainer: {
     flexDirection: 'row',
@@ -360,10 +309,8 @@ const styles = StyleSheet.create({
   selectedVoteButton: {
     borderWidth: 2,
     borderColor: 'black',
-    borderRadius: 5,
+    borderRadius: 8,
   },
 });
 
 export default EventsOfWeek;
-
-

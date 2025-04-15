@@ -1,17 +1,19 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Button, ImageBackground, Alert } from 'react-native';
+import {
+  View, Text, StyleSheet, ScrollView, Button,
+  ImageBackground, Alert, ActivityIndicator
+} from 'react-native';
 import { getFirestore, doc, getDoc } from 'firebase/firestore';
-import { app } from '../firebaseConfig'; // Adjust path as needed
+import { app } from '../firebaseConfig';
 
 const db = getFirestore(app);
 
-const Event = ({ route, navigation }) => {  
-  const { groupName, sliceName, username } = route.params; // Get groupName and sliceName from route params
+const Event = ({ route, navigation }) => {
+  const { groupName, sliceName, username } = route.params;
   const [eventData, setEventData] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Fetch event details from Firestore based on groupName and sliceName
     const fetchEventData = async () => {
       try {
         const groupDocRef = doc(db, 'groups', groupName);
@@ -22,7 +24,7 @@ const Event = ({ route, navigation }) => {
           const sliceData = data?.slices[sliceName];
 
           if (sliceData) {
-            setEventData(sliceData); // Set event data if slice is found
+            setEventData(sliceData);
           } else {
             Alert.alert("Error", "Event not found.");
           }
@@ -40,7 +42,12 @@ const Event = ({ route, navigation }) => {
   }, [groupName, sliceName]);
 
   if (loading) {
-    return <Text>Loading event...</Text>;
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" />
+        <Text>Loading event...</Text>
+      </View>
+    );
   }
 
   if (!eventData) {
@@ -48,12 +55,9 @@ const Event = ({ route, navigation }) => {
   }
 
   return (
-    <View style={styles.container}>
-      {/* Display Slice Name */}
-      <Text style={styles.title}>{eventData.name}</Text>
-
-      {/* Event Image */}
-      {eventData.imageUri && (
+    <ScrollView contentContainerStyle={styles.container}>
+      {/* Event Image with Title if imageUri exists */}
+      {eventData.imageUri ? (
         <ImageBackground
           source={{ uri: eventData.imageUri }}
           style={styles.imageBackground}
@@ -61,7 +65,7 @@ const Event = ({ route, navigation }) => {
         >
           <Text style={styles.imageText}>{sliceName}</Text>
         </ImageBackground>
-      )}
+      ) : null}
 
       {/* Event Details */}
       <View style={styles.eventDetails}>
@@ -69,49 +73,57 @@ const Event = ({ route, navigation }) => {
         <Text style={styles.time}>
           {eventData.startTime} - {eventData.endTime}
         </Text>
-        <Text style={styles.days}>{eventData.days ? eventData.days.join(', ') : 'No day assigned'}</Text>
+        <Text style={styles.days}>
+          {eventData.days?.join(', ') || 'No days assigned'}
+        </Text>
       </View>
 
       <Button title="Go to Group Screen" onPress={() => navigation.navigate('GroupScreen', { username })} />
-    </View>
+    </ScrollView>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
+    paddingBottom: 20,
+  },
+  loadingContainer: {
     flex: 1,
-    padding: 20,
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    marginBottom: 20,
-  },
-  imageBackground: {
-    width: '100%',
-    height: 200,
-    marginBottom: 20,
     justifyContent: 'center',
     alignItems: 'center',
   },
+  imageBackground: {
+    width: '100%',
+    height: 220,
+    justifyContent: 'flex-end',
+    alignItems: 'center',
+    paddingBottom: 20,
+    marginBottom: 16,
+  },
   imageStyle: {
-    opacity: 0.6,
+    resizeMode: 'cover',
+    opacity: 0.75,
   },
   imageText: {
     color: 'white',
-    fontSize: 20,
+    fontSize: 26,
     fontWeight: 'bold',
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: 8,
   },
   eventDetails: {
-    marginBottom: 20,
+    paddingHorizontal: 20,
   },
   description: {
-    fontSize: 16,
+    fontSize: 18,
     marginBottom: 10,
   },
   time: {
-    fontSize: 18,
+    fontSize: 16,
     color: '#333',
+    marginBottom: 6,
   },
   days: {
     fontSize: 16,
