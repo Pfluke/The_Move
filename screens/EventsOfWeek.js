@@ -47,25 +47,28 @@ const EventsOfWeek = ({ navigation, route }) => {
   }
 
   // Helper: Retrieve the user's current vote (if any) on an event.
-  const getUserVote = (eventKey) => {
-    const evt = eventData[eventKey] || {};
-    return evt.voters ? evt.voters[username] : 0;
-  };
+    const getUserVote = (eventKey) => {
+        const evt = eventData[eventKey] || {};
+        return evt.voters ? evt.voters[username] : 0;
+    };
 
-  // Helper: Get the event with the most votes.
-  const getEventWithMostVotes = () => { 
-    let maxVotes = -Infinity;
-    let eventWithMostVotes = null;
-    Object.entries(eventData).forEach(([eventKey, sliceData]) => {
-      if ((sliceData.votes || 0) > maxVotes) {
-        maxVotes = sliceData.votes;
-        eventWithMostVotes = eventKey;
-      }
-    });
-    return eventWithMostVotes;
-  };
+    const getTopVotedEventKeys = () => {
+        let maxVotes = -Infinity;
+        let topEvents = [];
+  
+        Object.entries(eventData).forEach(([eventKey, sliceData]) => {
+        const votes = sliceData.votes || 0;
+        if (votes > maxVotes) {
+            maxVotes = votes;
+            topEvents = [eventKey];
+        } else if (votes === maxVotes) {
+            topEvents.push(eventKey);
+        }
+        });
+        return topEvents;
+    };
 
-  const eventWithMostVotes = getEventWithMostVotes();
+    const topVotedEventKeys = getTopVotedEventKeys();
 
   // Handle vote action:
   // Users can vote (like/dislike) on each event—change their vote or remove it.
@@ -215,7 +218,7 @@ const EventsOfWeek = ({ navigation, route }) => {
                     const userVote = getUserVote(eventKey);
 
                     // Determine card background color.
-                    const isTopEvent = eventKey === eventWithMostVotes;
+                    const isTopEvent = topVotedEventKeys.includes(eventKey);
                     const hasPositiveVotes = data.votes > 0;
                     const hasNegativeVotes = data.votes < 0;
                     
