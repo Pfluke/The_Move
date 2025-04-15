@@ -46,6 +46,11 @@ const GroupScreen = ({ navigation, route }) => {
         groupsArray.push({ id: docSnap.id, ...groupData });
         creatorsObj[docSnap.id] = groupData.creator;
       });
+      groupsArray.sort((a, b) => { // sort by last accessed
+        const aTime = a.lastAccessed?.seconds || 0;
+        const bTime = b.lastAccessed?.seconds || 0;
+        return bTime - aTime;
+      });
       setUserGroups(groupsArray);
       setCreators(creatorsObj);
     }, (error) => {
@@ -82,83 +87,23 @@ const GroupScreen = ({ navigation, route }) => {
     try {
       const groupRef = doc(db, "groups", groupId);
       const groupSnap = await getDoc(groupRef);
-      if (!groupSnap.exists()) { // group does not exist
+      if (!groupSnap.exists()) {
         Alert.alert('Error', 'Group does not exist.');
         return;
       }
       const groupData = groupSnap.data();
-      if (groupData.password !== providedPassword) { // incorrect password
+      if (groupData.password !== providedPassword) {
         Alert.alert('Error', 'Incorrect group password. Please try again.');
         return;
       }
       await updateDoc(groupRef, {
-        members: arrayUnion(user.toLowerCase())
+        members: arrayUnion(user.toLowerCase()),
+        lastAccessed: serverTimestamp() // check for last accessed
       });
     } catch (error) {
       Alert.alert('Error', 'An error occurred while joining the group.');
       setErrorMessage(error.message);
     }
-  };
-
-  const GroupContextMenu = ({ groupId, isCreator, onLeave, onEdit, onDelete }) => {
-    const [isMenuVisible, setIsMenuVisible] = useState(false);
-  
-    return (
-      <View style={styles.contextMenuContainer}>
-        <TouchableOpacity 
-          style={styles.contextMenuButton} 
-          onPress={() => setIsMenuVisible(!isMenuVisible)}
-        >
-          <Text style={styles.contextMenuIcon}>⋮</Text>
-        </TouchableOpacity>
-        
-        {isMenuVisible && (
-          <>
-            {/* Full-screen overlay that will close the menu when clicked */}
-            <TouchableOpacity
-              style={styles.fullScreenOverlay}
-              activeOpacity={1}
-              onPress={() => setIsMenuVisible(false)}
-            />
-            
-            <View style={styles.contextMenuDropdown}>
-              <TouchableOpacity 
-                style={styles.contextMenuItem} 
-                onPress={() => {
-                  onLeave();
-                  setIsMenuVisible(false);
-                }}
-              >
-                <Text style={styles.contextMenuItemText}>Leave Group</Text>
-              </TouchableOpacity>
-              
-              {isCreator && (
-                <>
-                  <TouchableOpacity 
-                    style={styles.contextMenuItem} 
-                    onPress={() => {
-                      onEdit();
-                      setIsMenuVisible(false);
-                    }}
-                  >
-                    <Text style={styles.contextMenuItemText}>Edit Name</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity 
-                    style={[styles.contextMenuItem, styles.contextMenuDeleteItem]} 
-                    onPress={() => {
-                      onDelete();
-                      setIsMenuVisible(false);
-                    }}
-                  >
-                    <Text style={styles.contextMenuDeleteText}>Delete Group</Text>
-                  </TouchableOpacity>
-                </>
-              )}
-            </View>
-          </>
-        )}
-      </View>
-    );
   };
 
   const editGroupName = async (newName) => {
@@ -213,7 +158,8 @@ const GroupScreen = ({ navigation, route }) => {
         creator: user.toLowerCase(),
         members: [user.toLowerCase()],
         createdAt: serverTimestamp(),
-        password: password
+        password: password,
+        lastAccessed: serverTimestamp() // create for last accessed group
       });
     } catch (error) {
       console.error("Error creating group: ", error);
@@ -302,6 +248,67 @@ const GroupScreen = ({ navigation, route }) => {
     );
   };
 
+  const GroupContextMenu = ({ groupId, isCreator, onLeave, onEdit, onDelete }) => {
+    const [isMenuVisible, setIsMenuVisible] = useState(false);
+  
+    return (
+      <View style={styles.contextMenuContainer}>
+        <TouchableOpacity 
+          style={styles.contextMenuButton} 
+          onPress={() => setIsMenuVisible(!isMenuVisible)}
+        >
+          <Text style={styles.contextMenuIcon}>⋮</Text>
+        </TouchableOpacity>
+        
+        {isMenuVisible && (
+          <>
+            {/* Full-screen overlay that will close the menu when clicked */}
+            <TouchableOpacity
+              style={styles.fullScreenOverlay}
+              activeOpacity={1}
+              onPress={() => setIsMenuVisible(false)}
+            />
+            
+            <View style={styles.contextMenuDropdown}>
+              <TouchableOpacity 
+                style={styles.contextMenuItem} 
+                onPress={() => {
+                  onLeave();
+                  setIsMenuVisible(false);
+                }}
+              >
+                <Text style={styles.contextMenuItemText}>Leave Group</Text>
+              </TouchableOpacity>
+              
+              {isCreator && (
+                <>
+                  <TouchableOpacity 
+                    style={styles.contextMenuItem} 
+                    onPress={() => {
+                      onEdit();
+                      setIsMenuVisible(false);
+                    }}
+                  >
+                    <Text style={styles.contextMenuItemText}>Edit Name</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity 
+                    style={[styles.contextMenuItem, styles.contextMenuDeleteItem]} 
+                    onPress={() => {
+                      onDelete();
+                      setIsMenuVisible(false);
+                    }}
+                  >
+                    <Text style={styles.contextMenuDeleteText}>Delete Group</Text>
+                  </TouchableOpacity>
+                </>
+              )}
+            </View>
+          </>
+        )}
+      </View>
+    );
+  };
+
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: '#FFFFFF' }}>
       <StatusBar barStyle="dark-content" />
@@ -361,7 +368,17 @@ const GroupScreen = ({ navigation, route }) => {
                   </View>
                   <TouchableOpacity
                     style={styles.actionButton}
-                    onPress={() => navigation.navigate('EventScreen', { username, groupName: group.id })}
+                    onPress={() => {
+                      navigation.navigate('EventScreen', { username, groupName: group.id });
+                      setTimeout(() => { // update after 1 second
+                        const groupRef = doc(db, "groups", group.id); 
+                        updateDoc(groupRef, { // update most recently accessed
+                          lastAccessed: serverTimestamp()
+                        }).catch((error) => {
+                          console.error("Error updating lastAccessed:", error);
+                        });
+                      }, 1000);
+                    }}
                   >
                     <Text style={styles.actionButtonText}>
                       Go to Group
