@@ -6,26 +6,41 @@ import {
 import { MaterialIcons } from '@expo/vector-icons';
 
 // Firebase imports:
-import { getFirestore, doc, setDoc, updateDoc, getDoc } from 'firebase/firestore';
+import { 
+  getFirestore, doc, setDoc, updateDoc, getDoc, onSnapshot 
+} from 'firebase/firestore';
 import { app } from '../firebaseConfig';
 
 const db = getFirestore(app);
 
 const EventsOfWeek = ({ navigation, route }) => {
   const { username, groupName, initialEventData } = route.params;
-  const [loadingEventData, setLoadingEventData] = useState(false);
-  const [eventData, setEventData] = useState(initialEventData);
+  const [loadingEventData, setLoadingEventData] = useState(true);
+  const [eventData, setEventData] = useState(initialEventData || {});
 
   // Reference to the group document.
   const groupDocRef = doc(db, "groups", groupName);
 
+  // Real-time listener: updates eventData state whenever changes occur in Firebase.
   useEffect(() => {
-    if (!eventData) {
-      setLoadingEventData(true);
-    } else {
+    const unsubscribe = onSnapshot(groupDocRef, (docSnap) => {
+      if (docSnap.exists()) {
+        const data = docSnap.data();
+        setEventData(data.slices || {});
+      } else {
+        // If the group document doesn't exist, create it with an empty slices object.
+        setDoc(groupDocRef, { slices: {} })
+          .then(() => setEventData({}))
+          .catch((error) => console.error("Error creating group doc:", error));
+      }
       setLoadingEventData(false);
-    }
-  }, [eventData]);
+    }, (error) => {
+      console.error("onSnapshot error:", error);
+      setLoadingEventData(false);
+    });
+
+    return () => unsubscribe();
+  }, [groupDocRef]);
 
   if (loadingEventData) {
     return <Text>Loading events...</Text>;
@@ -41,22 +56,20 @@ const EventsOfWeek = ({ navigation, route }) => {
   const getEventWithMostVotes = () => { 
     let maxVotes = -Infinity;
     let eventWithMostVotes = null;
-  
     Object.entries(eventData).forEach(([eventKey, sliceData]) => {
       if ((sliceData.votes || 0) > maxVotes) {
         maxVotes = sliceData.votes;
         eventWithMostVotes = eventKey;
       }
     });
-  
     return eventWithMostVotes;
   };
 
   const eventWithMostVotes = getEventWithMostVotes();
 
   // Handle vote action:
-  // Users can vote (like/dislike) on each event—change their vote or remove it,
-  // and the user is allowed only one like and one dislike per day.
+  // Users can vote (like/dislike) on each event—change their vote or remove it.
+  // Additionally, the user can only use one like and one dislike per day.
   const handleVote = async (eventKey, voteValue) => {
     const eventItem = eventData[eventKey];
     if (!eventItem) return;
@@ -67,19 +80,16 @@ const EventsOfWeek = ({ navigation, route }) => {
     const voteDiff = newVote - currentVote;
 
     // If adding a new vote (or changing to a different vote), check per-day limits.
-    // This check is skipped if the vote is being removed (newVote === 0).
+    // This check is skipped if the vote is being removed.
     if (newVote !== 0) {
-      // Make a lowercase copy of days for the current event.
       const currentDays = eventItem.days ? eventItem.days.map(day => day.toLowerCase()) : [];
-      // For each event other than the current one:
+      // For every other event in the state:
       for (const [otherKey, otherEvent] of Object.entries(eventData)) {
         if (otherKey === eventKey) continue;
         const otherUserVote = (otherEvent.voters && otherEvent.voters[username]) || 0;
-        // If the user has already voted the same way on the other event…
         if (otherUserVote === newVote) {
-          // Get the days for the other event.
           const otherDays = otherEvent.days ? otherEvent.days.map(day => day.toLowerCase()) : [];
-          // Check if there is any overlap.
+          // Check if there is any day overlap between the two events.
           const intersectingDays = currentDays.filter(day => otherDays.includes(day));
           if (intersectingDays.length > 0) {
             const conflictDay = intersectingDays[0];
@@ -93,7 +103,7 @@ const EventsOfWeek = ({ navigation, route }) => {
       }
     }
 
-    // Update local state immediately.
+    // Optimistically update local state.
     setEventData(prev => ({
       ...prev,
       [eventKey]: {
@@ -108,24 +118,33 @@ const EventsOfWeek = ({ navigation, route }) => {
 
     // Update Firebase.
     try {
-      // Get the current group document snapshot.
+      // Fetch the latest group document data.
       const groupSnap = await getDoc(groupDocRef);
-      if (!groupSnap.exists()) {
+      let currentSliceData;
+      if (groupSnap.exists()) {
+        const groupData = groupSnap.data();
+        currentSliceData = (groupData.slices && groupData.slices[eventKey]) || {
+          votes: eventItem.votes || 0,
+          voters: eventItem.voters || {},
+          days: eventItem.days || [],
+          startTime: eventItem.startTime || '',
+          endTime: eventItem.endTime || '',
+          imageUri: eventItem.imageUri || '',
+          description: eventItem.description || '',
+        };
+      } else {
+        // Create the group document if it doesn't exist.
+        currentSliceData = {
+          votes: eventItem.votes || 0,
+          voters: eventItem.voters || {},
+          days: eventItem.days || [],
+          startTime: eventItem.startTime || '',
+          endTime: eventItem.endTime || '',
+          imageUri: eventItem.imageUri || '',
+          description: eventItem.description || '',
+        };
         await setDoc(groupDocRef, { slices: {} });
       }
-      // Retrieve a fresh snapshot.
-      const groupData = (await getDoc(groupDocRef)).data();
-      const sliceData = groupData.slices ? groupData.slices[eventKey] : null;
-      // Use Firebase data if it exists; otherwise, fall back to our local eventItem.
-      const currentSliceData = sliceData || {
-        votes: eventItem.votes || 0,
-        voters: eventItem.voters || {},
-        days: eventItem.days || [],
-        startTime: eventItem.startTime || '',
-        endTime: eventItem.endTime || '',
-        imageUri: eventItem.imageUri || '',
-        description: eventItem.description || '',
-      };
 
       const currentVotes = currentSliceData.votes || 0;
       const currentVoters = currentSliceData.voters || {};
@@ -133,16 +152,17 @@ const EventsOfWeek = ({ navigation, route }) => {
       let newVotes, updatedVoters;
 
       if (userCurrentVote === voteValue) {
-        // If toggling the same vote, remove it.
+        // Removing the vote.
         newVotes = currentVotes - voteValue;
         updatedVoters = { ...currentVoters };
         delete updatedVoters[username];
       } else {
-        // Otherwise, update the vote.
+        // Adding/changing the vote.
         newVotes = currentVotes + voteValue - userCurrentVote;
         updatedVoters = { ...currentVoters, [username]: voteValue };
       }
 
+      // Update the specific event slice in the group document.
       await updateDoc(groupDocRef, {
         [`slices.${eventKey}`]: {
           ...currentSliceData,
@@ -175,7 +195,7 @@ const EventsOfWeek = ({ navigation, route }) => {
         <Text style={styles.title}>TOP EVENTS OF THE WEEK</Text>
       </View>
       
-      <SafeAreaView style={{ flex: 1}}>
+      <SafeAreaView style={{ flex: 1 }}>
         <KeyboardAvoidingView
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
           style={{ flex: 1, backgroundColor: 'white' }}
@@ -184,7 +204,7 @@ const EventsOfWeek = ({ navigation, route }) => {
           <ScrollView 
             contentContainerStyle={styles.scrollContainer}
             keyboardShouldPersistTaps="handled"
-          >      
+          >
             {eventData && Object.keys(eventData).length === 0 ? (
               <Text style={styles.noEventsText}>NO EVENTS CURRENTLY SCHEDULED</Text>
             ) : (
@@ -192,7 +212,7 @@ const EventsOfWeek = ({ navigation, route }) => {
                 {Object.entries(eventData)
                   .sort(([, a], [, b]) => (b.votes || 0) - (a.votes || 0))
                   .map(([eventKey, data]) => {
-                    const userVote = getUserVote(eventKey);  
+                    const userVote = getUserVote(eventKey);
 
                     // Determine card background color.
                     const isTopEvent = eventKey === eventWithMostVotes;
@@ -251,7 +271,7 @@ const EventsOfWeek = ({ navigation, route }) => {
                         </View>
                       </View>
                     );
-                })}
+                  })}
               </View>
             )}
           </ScrollView>
@@ -365,5 +385,6 @@ const styles = StyleSheet.create({
 });
 
 export default EventsOfWeek;
+
 
 
