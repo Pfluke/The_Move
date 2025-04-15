@@ -12,6 +12,7 @@ import DayCalendar from './screens/DayCalendar';
 import Event from './screens/Event';
 import WheelOfFortune from './screens/WheelOfFortune';
 import EventsOfWeek from './screens/EventsOfWeek';
+import EventCard from './screens/EventCard';
 
 // Stack navigator setup
 const Stack = createStackNavigator();
