@@ -24,8 +24,6 @@ const App = () => {
         <Stack.Screen name="LoginScreen" component={LoginScreen}  
         options={{
           headerShown: false,
-          //Used to remove navigation back to welcome page. It is unnecessary.
-          //headerLeft: () => null
         }} />
         <Stack.Screen name="GroupScreen" component={GroupScreen}
         options={{
@@ -33,6 +31,11 @@ const App = () => {
         }} />
         <Stack.Screen name="EventScreen" component={EventScreen} />
         <Stack.Screen name="EventsOfWeek" component={EventsOfWeek}
+        options={{
+          headerShown: false, 
+        }}
+        />
+        <Stack.Screen name="EventCard" component={EventCard}
         options={{
           headerShown: false, 
         }}
