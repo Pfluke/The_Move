@@ -4,7 +4,11 @@ import {
   Image, KeyboardAvoidingView, Platform, SafeAreaView, StatusBar 
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
-import { getFirestore, doc, setDoc, updateDoc, getDoc, onSnapshot } from 'firebase/firestore';
+
+// Firebase imports:
+import { 
+  getFirestore, doc, setDoc, updateDoc, getDoc, onSnapshot 
+} from 'firebase/firestore';
 import { app } from '../firebaseConfig';
 
 const db = getFirestore(app);
@@ -16,6 +20,7 @@ const EventsOfWeek = ({ navigation, route }) => {
 
   const groupDocRef = doc(db, "groups", groupName);
 
+  // Real-time listener: updates eventData state whenever changes occur in Firebase.
   useEffect(() => {
     if (selectedDay === "WEEK") {
       setEventData(initialEventData);
@@ -43,25 +48,31 @@ const EventsOfWeek = ({ navigation, route }) => {
     setLoadingEventData(!eventData);
   }, [eventData]);
 
+  // Helper: Retrieve the user's current vote (if any) on an event.
   const getUserVote = (eventKey) => {
     const evt = eventData[eventKey] || {};
     return evt.voters ? evt.voters[username] : 0;
   };
 
-  const getEventWithMostVotes = () => {
+  const getTopVotedEventKeys = () => {
     let maxVotes = -Infinity;
-    let topEvent = null;
-    Object.entries(eventData).forEach(([key, slice]) => {
-      if ((slice.votes || 0) > maxVotes) {
-        maxVotes = slice.votes;
-        topEvent = key;
+    let topEvents = [];
+
+    Object.entries(eventData).forEach(([eventKey, sliceData]) => {
+      const votes = sliceData.votes || 0;
+      if (votes > maxVotes) {
+        maxVotes = votes;
+        topEvents = [eventKey];
+      } else if (votes === maxVotes) {
+        topEvents.push(eventKey);
       }
     });
-    return topEvent;
+    return topEvents;
   };
 
-  const eventWithMostVotes = getEventWithMostVotes();
+  const topVotedEventKeys = getTopVotedEventKeys();
 
+  // Handle vote action:
   const handleVote = async (eventKey, voteValue) => {
     const eventItem = eventData[eventKey];
     if (!eventItem) return;
@@ -71,20 +82,26 @@ const EventsOfWeek = ({ navigation, route }) => {
     const voteDiff = newVote - currentVote;
 
     if (newVote !== 0) {
-      const currentDays = eventItem.days?.map(day => day.toLowerCase()) || [];
+      const currentDays = eventItem.days ? eventItem.days.map(day => day.toLowerCase()) : [];
       for (const [otherKey, otherEvent] of Object.entries(eventData)) {
         if (otherKey === eventKey) continue;
-        const otherVote = otherEvent.voters?.[username] || 0;
-        if (otherVote === newVote) {
-          const overlap = currentDays.filter(day => otherEvent.days?.map(d => d.toLowerCase())?.includes(day));
-          if (overlap.length > 0) {
-            Alert.alert("Voting Error", `You've already used your ${newVote === 1 ? "like" : "dislike"} for ${overlap[0]}`);
+        const otherUserVote = (otherEvent.voters && otherEvent.voters[username]) || 0;
+        if (otherUserVote === newVote) {
+          const otherDays = otherEvent.days ? otherEvent.days.map(day => day.toLowerCase()) : [];
+          const intersectingDays = currentDays.filter(day => otherDays.includes(day));
+          if (intersectingDays.length > 0) {
+            const conflictDay = intersectingDays[0];
+            Alert.alert(
+              "Voting Error",
+              `You've already used your ${newVote === 1 ? "like" : "dislike"} for ${conflictDay.charAt(0).toUpperCase() + conflictDay.slice(1)}.`
+            );
             return;
           }
         }
       }
     }
 
+    // Optimistically update local state.
     setEventData(prev => ({
       ...prev,
       [eventKey]: {
@@ -99,30 +116,49 @@ const EventsOfWeek = ({ navigation, route }) => {
 
     try {
       const groupSnap = await getDoc(groupDocRef);
-      if (!groupSnap.exists()) await setDoc(groupDocRef, { slices: {} });
+      let currentSliceData;
+      if (groupSnap.exists()) {
+        const groupData = groupSnap.data();
+        currentSliceData = (groupData.slices && groupData.slices[eventKey]) || {
+          votes: eventItem.votes || 0,
+          voters: eventItem.voters || {},
+          days: eventItem.days || [],
+          startTime: eventItem.startTime || '',
+          endTime: eventItem.endTime || '',
+          imageUri: eventItem.imageUri || '',
+          description: eventItem.description || '',
+        };
+      } else {
+        currentSliceData = {
+          votes: eventItem.votes || 0,
+          voters: eventItem.voters || {},
+          days: eventItem.days || [],
+          startTime: eventItem.startTime || '',
+          endTime: eventItem.endTime || '',
+          imageUri: eventItem.imageUri || '',
+          description: eventItem.description || '',
+        };
+        await setDoc(groupDocRef, { slices: {} });
+      }
 
       const fresh = (await getDoc(groupDocRef)).data();
       const slice = fresh?.slices?.[eventKey] || eventItem;
 
-      const currVotes = slice.votes || 0;
-      const currVoters = slice.voters || {};
-      const userVote = currVoters[username] || 0;
-
-      let updatedVotes, updatedVoters;
-
-      if (userVote === voteValue) {
-        updatedVotes = currVotes - voteValue;
-        updatedVoters = { ...currVoters };
+      let newVotes;
+      let updatedVoters;
+      if (currentVote === voteValue) {
+        newVotes = slice.votes - voteValue;
+        updatedVoters = { ...slice.voters };
         delete updatedVoters[username];
       } else {
-        updatedVotes = currVotes + voteValue - userVote;
-        updatedVoters = { ...currVoters, [username]: voteValue };
+        newVotes = slice.votes + voteValue - currentVote;
+        updatedVoters = { ...slice.voters, [username]: voteValue };
       }
 
       await updateDoc(groupDocRef, {
         [`slices.${eventKey}`]: {
           ...slice,
-          votes: updatedVotes,
+          votes: newVotes,
           voters: updatedVoters,
         }
       });
@@ -145,10 +181,18 @@ const EventsOfWeek = ({ navigation, route }) => {
           TOP EVENTS OF {selectedDay === "WEEK" ? "THE WEEK" : selectedDay?.toUpperCase() || "THE WEEK"}
         </Text>
       </View>
+
       <SafeAreaView style={{ flex: 1 }}>
-        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
-          <ScrollView contentContainerStyle={styles.scrollContainer} keyboardShouldPersistTaps="handled">
-            {Object.keys(eventData).length === 0 ? (
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          style={{ flex: 1, backgroundColor: 'white' }}
+          keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
+        >
+          <ScrollView 
+            contentContainerStyle={styles.scrollContainer}
+            keyboardShouldPersistTaps="handled"
+          >
+            {eventData && Object.keys(eventData).length === 0 ? (
               <Text style={styles.noEventsText}>NO EVENTS CURRENTLY SCHEDULED</Text>
             ) : (
               <View style={styles.EventDataList}>
@@ -156,21 +200,27 @@ const EventsOfWeek = ({ navigation, route }) => {
                   .sort(([, a], [, b]) => (b.votes || 0) - (a.votes || 0))
                   .map(([eventKey, data]) => {
                     const userVote = getUserVote(eventKey);
-                    const isTopEvent = eventKey === eventWithMostVotes;
-                    const bgColor = isTopEvent
-                      ? 'rgb(70, 233, 70)'
-                      : data.votes > 0
-                      ? '#d4f7d4'
-                      : data.votes < 0
-                      ? '#ffdddd'
-                      : '#fff';
+
+                    const isTopEvent = topVotedEventKeys.includes(eventKey);
+                    const hasPositiveVotes = data.votes > 0;
+                    const hasNegativeVotes = data.votes < 0;
+                    
+                    let cardBackgroundColor;
+                    if (isTopEvent) {
+                      cardBackgroundColor = 'rgb(70, 233, 70)';
+                    } else if (hasPositiveVotes) {
+                      cardBackgroundColor = '#d4f7d4';
+                    } else if (hasNegativeVotes) {
+                      cardBackgroundColor = '#ffdddd';
+                    } else {
+                      cardBackgroundColor = '#FFF';
+                    }
 
                     return (
-                      <View key={eventKey} style={[styles.cardContainer, { backgroundColor: bgColor }]}>
+                      <View key={eventKey} style={[styles.cardContainer, { backgroundColor: cardBackgroundColor }]}>
                         <View style={styles.cardContentRow}>
                           <View style={styles.eventDetailsColumn}>
                             <Text style={styles.cardTitle}>{eventKey}</Text>
-                            {data.imageUri && <Image source={{ uri: data.imageUri }} style={styles.cardImage} />}
                             <Text style={styles.cardDetails}>
                               {data.days?.join(", ") || "No day assigned"} | {data.startTime} - {data.endTime}
                             </Text>
@@ -256,7 +306,7 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     padding: 10,
     flexDirection: 'column',
-},
+  },
   cardContentRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',

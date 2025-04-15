@@ -109,7 +109,7 @@ const EventScreen = ({ navigation, route }) => {
             }
           >
             <Text style={styles.customButtonText}>
-              View Top Events Of The Week
+              View All Events for this Week
             </Text>
           </TouchableOpacity>
         </View>
