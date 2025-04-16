@@ -1,176 +1,114 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { View, Text, ScrollView, StyleSheet, Dimensions, TouchableWithoutFeedback } from 'react-native';
+import React, { useState, useRef } from 'react';
+import {
+  View, Text, ScrollView, StyleSheet,
+  Dimensions, TouchableOpacity, TouchableWithoutFeedback, Alert
+} from 'react-native';
 import { GestureHandlerRootView, PanGestureHandler, State } from 'react-native-gesture-handler';
+import { getFirestore, doc, updateDoc } from 'firebase/firestore';
+import { app } from '../firebaseConfig';
 
-const ScheduleGrid = () => {
-  // Constants for grid configuration
-  const CELL_HEIGHT = 50;
-  const START_HOUR = 8; // 8:00 AM
-  const END_HOUR = 22; // 10:00 PM
-  const SCROLL_BORDER_WIDTH = 40; // Width of the scroll-only area
-  
-  // Generate time slots for the day (30-minute intervals)
-  const generateTimeSlots = () => {
-    const slots = [];
-    for (let hour = START_HOUR; hour < END_HOUR; hour++) {
-      const hourFormatted = hour % 12 === 0 ? 12 : hour % 12;
-      const amPm = hour < 12 ? 'AM' : 'PM';
-      
-      // Add :00 slot
-      slots.push({
-        id: `${hour}:00`,
-        label: `${hourFormatted}:00 ${amPm}`,
-        time: `${hour}:00`
-      });
-      
-      // Add :30 slot
-      slots.push({
-        id: `${hour}:30`,
-        label: `${hourFormatted}:30 ${amPm}`,
-        time: `${hour}:30`
-      });
-    }
-    return slots;
-  };
+const db = getFirestore(app);
+const CELL_HEIGHT = 50;
+const START_HOUR = 8;
+const END_HOUR = 22;
+const SCROLL_BORDER = 40;
 
+const generateTimeSlots = () => {
+  const slots = [];
+  for (let h=START_HOUR; h<END_HOUR; h++) {
+    const labH = h%12||12;
+    const ampm = h<12?'AM':'PM';
+    slots.push({id:`${h}:00`,label:`${labH}:00 ${ampm}`});
+    slots.push({id:`${h}:30`,label:`${labH}:30 ${ampm}`});
+  }
+  return slots;
+};
+
+const ScheduleGrid = ({ route, navigation }) => {
+  const { username } = route.params;
   const timeSlots = generateTimeSlots();
-  
-  // State to track selected time slots
-  const [selectedSlots, setSelectedSlots] = useState({});
+  const [selected, setSelected] = useState({});
   const [gridWidth, setGridWidth] = useState(0);
-  
-  // Refs for dragging
-  const isDraggingRef = useRef(false);
-  const lastSelectedRef = useRef(null);
-  const selectionModeRef = useRef(true); // true = select, false = deselect
-  const scrollViewRef = useRef(null);
-  const scrollOffsetRef = useRef(0);
-  
-  // Track scroll position
-  const handleScroll = (event) => {
-    scrollOffsetRef.current = event.nativeEvent.contentOffset.y;
-  };
-  
-  // Find the time slot at a specific Y position
-  const getTimeSlotAtPosition = (y) => {
-    const absoluteY = y + scrollOffsetRef.current;
-    const slotIndex = Math.floor(absoluteY / CELL_HEIGHT);
-    
-    if (slotIndex >= 0 && slotIndex < timeSlots.length) {
-      return timeSlots[slotIndex].id;
-    }
-    return null;
-  };
 
-  // Determine if touch is in the selection area or scroll area
-  const isInSelectionArea = (x) => {
-    // If touch is in the middle part (excluding scroll borders)
-    return x > SCROLL_BORDER_WIDTH && x < gridWidth - SCROLL_BORDER_WIDTH;
-  };
+  const isDragging = useRef(false);
+  const lastSel = useRef(null);
+  const selMode = useRef(true);
+  const scrollRef = useRef(null);
+  const scrollOff = useRef(0);
 
-  // Handle the start of a drag
-  const handleDragStart = (event) => {
-    const { x, y } = event.nativeEvent;
-    
-    // Only process selection if in the main grid area (not scroll borders)
-    if (isInSelectionArea(x)) {
-      const slotId = getTimeSlotAtPosition(y);
-      
-      if (slotId) {
-        isDraggingRef.current = true;
-        lastSelectedRef.current = slotId;
-        
-        // Determine if we're selecting or deselecting
-        selectionModeRef.current = !selectedSlots[slotId];
-        
-        // Update the selected slots
-        setSelectedSlots(prev => ({
-          ...prev,
-          [slotId]: selectionModeRef.current
-        }));
-      }
+  const handleScroll = e => { scrollOff.current = e.nativeEvent.contentOffset.y; };
+  const getSlotAt = y => {
+    const idx = Math.floor((y+scrollOff.current)/CELL_HEIGHT);
+    return timeSlots[idx]?.id||null;
+  };
+  const inArea = x => x>SCROLL_BORDER && x<gridWidth-SCROLL_BORDER;
+
+  const onDragStart = e => {
+    const { x,y } = e.nativeEvent;
+    if (!inArea(x)) return;
+    const id = getSlotAt(y);
+    if (!id) return;
+    isDragging.current = true;
+    lastSel.current = id;
+    selMode.current = !selected[id];
+    setSelected(p=>({...p, [id]: selMode.current}));
+  };
+  const onDrag = e => {
+    const { x,y } = e.nativeEvent;
+    if (!isDragging.current || !inArea(x)) return;
+    const id = getSlotAt(y);
+    if (id && id!==lastSel.current) {
+      lastSel.current = id;
+      setSelected(p=>({...p, [id]: selMode.current}));
     }
   };
+  const onDragEnd = () => { isDragging.current = false; };
 
-  // Handle drag movement
-  const handleDrag = (event) => {
-    const { x, y } = event.nativeEvent;
-    
-    // Only process selection if in the middle grid area and we're currently dragging
-    if (isDraggingRef.current && isInSelectionArea(x)) {
-      const slotId = getTimeSlotAtPosition(y);
-      
-      if (slotId && lastSelectedRef.current !== slotId) {
-        lastSelectedRef.current = slotId;
-        
-        // Update selected slots while maintaining selection mode
-        setSelectedSlots(prev => ({
-          ...prev,
-          [slotId]: selectionModeRef.current
-        }));
-      }
+  const toggleSlot = id => {
+    setSelected(p=>({...p, [id]:!p[id]}));
+  };
+
+  const saveBusySlots = async () => {
+    try {
+      const userRef = doc(db,'users',username.toLowerCase());
+      await updateDoc(userRef,{ busySlots: selected });
+      navigation.navigate('GroupScreen',{username,userGroups:[]});
+    } catch(e) {
+      Alert.alert('Error saving', e.message);
     }
-  };
-
-  // Handle end of drag
-  const handleDragEnd = () => {
-    isDraggingRef.current = false;
-  };
-
-  // Manually handle time slot selection (for direct taps)
-  const handleTimeSlotPress = (slotId) => {
-    setSelectedSlots(prev => ({
-      ...prev,
-      [slotId]: !prev[slotId]
-    }));
-  };
-
-  // Measure grid width when component mounts
-  const onGridLayout = (event) => {
-    const { width } = event.nativeEvent.layout;
-    setGridWidth(width);
   };
 
   return (
     <GestureHandlerRootView style={styles.container}>
-      <Text style={styles.title}>Select Available Times</Text>
-      <View style={styles.gridContainer} onLayout={onGridLayout}>
-        {/* Left scroll border */}
-        <View style={[styles.scrollBorder, { left: 0 }]} />
-        
-        {/* Right scroll border */}
-        <View style={[styles.scrollBorder, { right: 0 }]} />
-        
+      <Text style={styles.title}>Select Busy Times</Text>
+
+      <View style={styles.gridContainer} onLayout={e=>setGridWidth(e.nativeEvent.layout.width)}>
+        <View style={[styles.scrollBorder,{left:0}]} />
+        <View style={[styles.scrollBorder,{right:0}]} />
+
         <PanGestureHandler
-          onGestureEvent={handleDrag}
-          onHandlerStateChange={(event) => {
-            if (event.nativeEvent.state === State.BEGAN) {
-              handleDragStart(event);
-            } else if (event.nativeEvent.state === State.END) {
-              handleDragEnd();
-            }
+          onGestureEvent={onDrag}
+          onHandlerStateChange={ev=>{
+            if (ev.nativeEvent.state===State.BEGAN) onDragStart(ev);
+            else if (ev.nativeEvent.state===State.END) onDragEnd();
           }}
         >
           <ScrollView
-            ref={scrollViewRef}
+            ref={scrollRef}
             style={styles.scrollView}
-            contentContainerStyle={styles.contentContainer}
-            showsVerticalScrollIndicator={true}
-            scrollEventThrottle={16}
             onScroll={handleScroll}
+            scrollEventThrottle={16}
           >
-            {timeSlots.map((slot) => (
-              <TouchableWithoutFeedback 
+            {timeSlots.map(slot=>(
+              <TouchableWithoutFeedback
                 key={slot.id}
-                onPress={() => handleTimeSlotPress(slot.id)}
+                onPress={()=>toggleSlot(slot.id)}
               >
-                <View 
-                  style={[
-                    styles.timeSlot,
-                    selectedSlots[slot.id] ? styles.selectedTimeSlot : null,
-                    slot.id.endsWith(':00') ? styles.hourBorder : null
-                  ]}
-                >
+                <View style={[
+                  styles.timeSlot,
+                  selected[slot.id] && styles.selectedTimeSlot,
+                  slot.id.endsWith(':00') && styles.hourBorder
+                ]}>
                   <Text style={styles.timeText}>{slot.label}</Text>
                 </View>
               </TouchableWithoutFeedback>
@@ -178,28 +116,20 @@ const ScheduleGrid = () => {
           </ScrollView>
         </PanGestureHandler>
       </View>
-      
-      <View style={styles.legend}>
-        <View style={styles.legendItem}>
-          <View style={styles.scrollIndicator} />
-          <Text style={styles.legendText}>Scroll Areas</Text>
-        </View>
-        <View style={styles.legendItem}>
-          <View style={styles.selectIndicator} />
-          <Text style={styles.legendText}>Selection Area</Text>
-        </View>
-      </View>
-      
+
       <View style={styles.selectedTimesContainer}>
-        <Text style={styles.selectedTimesTitle}>Selected Times:</Text>
+        <Text style={styles.selectedTimesTitle}>Busy Slots:</Text>
         <Text>
-          {Object.keys(selectedSlots)
-            .filter(id => selectedSlots[id])
-            .sort()
-            .map(id => timeSlots.find(slot => slot.id === id)?.label)
-            .join(', ') || 'None'}
+          {Object.keys(selected)
+            .filter(id=>selected[id])
+            .map(id=>timeSlots.find(s=>s.id===id).label)
+            .join(', ')||'None'}
         </Text>
       </View>
+
+      <TouchableOpacity style={styles.saveButton} onPress={saveBusySlots}>
+        <Text style={styles.saveText}>Save Busy Times</Text>
+      </TouchableOpacity>
     </GestureHandlerRootView>
   );
 };

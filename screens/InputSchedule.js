@@ -1,350 +1,276 @@
 import React, { useState } from 'react';
-import { 
-  View, 
-  Text, 
-  StyleSheet, 
-  TouchableOpacity, 
-  Alert, 
-  SafeAreaView,
-  ScrollView,
-  Modal,
-  TouchableWithoutFeedback,
-  Platform,
+import {
+  View, Text, StyleSheet, TouchableOpacity, Alert,
+  SafeAreaView, ScrollView, Platform, Modal, TouchableWithoutFeedback
 } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
+import { getFirestore, doc, updateDoc } from 'firebase/firestore';
+import { app } from '../firebaseConfig';
 
-const daysOfWeek = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+const db = getFirestore(app);
+const daysOfWeek = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
 
 const InputSchedule = ({ route, navigation }) => {
+  const { username } = route.params;
+  const [currentDayIndex, setCurrentDayIndex] = useState(0);
+  const [busyTimes, setBusyTimes] = useState(
+    daysOfWeek.reduce((acc,d)=>{ acc[d]=[]; return acc; },{})
+  );
 
-    const [currentDayIndex, setCurrentDayIndex] = useState(0);
-    
-    const [availabilityByDay, setAvailabilityByDay] = useState(
-        daysOfWeek.reduce((acc, day) => {
-            acc[day] = [];
-            return acc;
-        }, {})
+  const [isTimePickerVisible, setTimePickerVisible] = useState(false);
+  const [selectedTime, setSelectedTime] = useState(new Date());
+  const [tempRange, setTempRange] = useState({start:null,end:null});
+  const [isStart, setIsStart] = useState(true);
+  const [showIOSStart, setShowIOSStart] = useState(false);
+  const [showIOSEnd, setShowIOSEnd] = useState(false);
+
+  const isAnyPickerVisible = () =>
+    isTimePickerVisible || showIOSStart || showIOSEnd;
+
+  const formatTime = date => {
+    if (!date) return '';
+    let h=date.getHours(), m=date.getMinutes();
+    const ampm=h>=12?'PM':'AM';
+    h=h%12||12;
+    m=m<10?'0'+m:m;
+    return `${h}:${m} ${ampm}`;
+  };
+
+  const addBusy = () => {
+    if (Platform.OS==='ios') {
+      setSelectedTime(new Date());
+      setShowIOSStart(true);
+    } else {
+      setTempRange({start:null,end:null});
+      setIsStart(true);
+      setSelectedTime(new Date());
+      setTimePickerVisible(true);
+    }
+  };
+
+  const handleTimeChange = (e,d) => {
+    if (e.type==='dismissed' && Platform.OS==='android') {
+      return setTimePickerVisible(false);
+    }
+    setSelectedTime(d||selectedTime);
+  };
+
+  const handleIOSStart = () => {
+    setShowIOSStart(false);
+    setTempRange(p=>({...p,start:selectedTime}));
+    setShowIOSEnd(true);
+  };
+
+  const handleIOSEnd = () => {
+    setShowIOSEnd(false);
+    if (selectedTime>tempRange.start) {
+      const day=daysOfWeek[currentDayIndex];
+      const newR={ id:Date.now().toString(), start:tempRange.start, end:selectedTime };
+      const existing=busyTimes[day];
+      if (existing.some(r=>(
+        (newR.start<=r.start && newR.end>r.start) ||
+        (newR.start>=r.start && newR.start<r.end)
+      ))) {
+        return Alert.alert('Overlap','That busy time overlaps existing.');
+      }
+      setBusyTimes(p=>({
+        ...p,
+        [day]: [...p[day],newR]
+      }));
+    } else {
+      Alert.alert('Invalid','End must be after start');
+    }
+  };
+
+  const closeAll = () => {
+    setTimePickerVisible(false);
+    setShowIOSStart(false);
+    setShowIOSEnd(false);
+  };
+
+  const removeRange = id => {
+    const day=daysOfWeek[currentDayIndex];
+    setBusyTimes(p=>({
+      ...p,
+      [day]: p[day].filter(r=>r.id!==id)
+    }));
+  };
+
+  const navDay = delta => {
+    setCurrentDayIndex(i=>Math.min(Math.max(i+delta,0),6));
+  };
+
+  const handleSave = () => {
+    Alert.alert(
+      'Save Confirmation',
+      'Are you sure you want to save your busy times?',
+      [
+        { text:'Cancel', style:'cancel' },
+        {
+          text:'OK', onPress: async () => {
+            try {
+              const userRef = doc(db,'users',username.toLowerCase());
+              await updateDoc(userRef,{ busyTimes });
+              navigation.navigate('GroupScreen',{
+                username,
+                userGroups: []
+              });
+            } catch(e) {
+              Alert.alert('Error saving',e.message);
+            }
+          }
+        }
+      ]
     );
-    
-    const [isTimePickerVisible, setTimePickerVisible] = useState(false);
-    const [selectedTime, setSelectedTime] = useState(new Date());
-    const [isStartTime, setIsStartTime] = useState(true);
-    const [tempTimeRange, setTempTimeRange] = useState({ start: null, end: null });
-    
-    const [showIOSStartPicker, setShowIOSStartPicker] = useState(false);
-    const [showIOSEndPicker, setShowIOSEndPicker] = useState(false);
-    
-    const isAnyPickerVisible = () => {
-        return isTimePickerVisible || showIOSStartPicker || showIOSEndPicker;
-    };
-    
-    const formatTime = (date) => {
-        if (!date) return '';
-        let hours = date.getHours();
-        const minutes = date.getMinutes();
-        const ampm = hours >= 12 ? 'PM' : 'AM';
-        hours = hours % 12;
-        hours = hours ? hours : 12; // hour '0' should be '12'
-        const minutesStr = minutes < 10 ? '0' + minutes : minutes;
-        return `${hours}:${minutesStr} ${ampm}`;
-    };
+  };
 
-    const addAvailability = () => {
-        if (Platform.OS === 'ios') {
-            setSelectedTime(new Date());
-            setShowIOSStartPicker(true);
-        } else {
-            setTempTimeRange({ start: null, end: null });
-            setIsStartTime(true);
-            setSelectedTime(new Date());
-            setTimePickerVisible(true);
-        }
-    };
+  const day=daysOfWeek[currentDayIndex];
+  const list=busyTimes[day];
 
-    const handleTimeChange = (event, selectedDate) => {
-        if (event.type === 'dismissed') {
-            // use has cencelled the action
-            if (Platform.OS === 'android') {
-                setTimePickerVisible(false);
-            }
-            return;
-        }
-        
-        const currentDate = selectedDate || selectedTime;
-        setSelectedTime(currentDate);
-    };
+  return (
+    <SafeAreaView style={styles.container}>
+      <View style={styles.headerContainer}>
+        <Text style={styles.title}>When Are You Busy?</Text>
+      </View>
 
-    const handleIOSStartConfirm = () => {
-        setShowIOSStartPicker(false);
-        setTempTimeRange(prev => ({...prev, start: selectedTime}));
-        setShowIOSEndPicker(true);
-    };
+      <View style={styles.contentWrapper}>
+        <View style={styles.dayNavigation}>
+          <TouchableOpacity
+            style={[styles.navButton, currentDayIndex===0 && styles.disabledButton]}
+            onPress={()=>navDay(-1)} disabled={currentDayIndex===0}
+          >
+            <Text style={styles.navButtonText}>Previous</Text>
+          </TouchableOpacity>
+          <View style={styles.dayHeader}>
+            <Text style={styles.dayHeaderText}>{day}</Text>
+          </View>
+          <TouchableOpacity
+            style={[styles.navButton, currentDayIndex===6 && styles.disabledButton]}
+            onPress={()=>navDay(1)} disabled={currentDayIndex===6}
+          >
+            <Text style={styles.navButtonText}>Next</Text>
+          </TouchableOpacity>
+        </View>
 
-    const handleIOSEndConfirm = () => {
-        setShowIOSEndPicker(false);
-        
-        if (selectedTime > tempTimeRange.start) {
-            const currentDay = daysOfWeek[currentDayIndex];
-            const newTimeRange = {
-                id: Date.now().toString(),
-                start: tempTimeRange.start,
-                end: selectedTime
-            };
-            
-            const existingRanges = availabilityByDay[currentDay] || [];
-            if (hasOverlap(newTimeRange, existingRanges)) {
-                Alert.alert(
-                    "Selected Availability Already Exists", 
-                    "Please Select a Different Time"
-                );
-            } else {
-                setAvailabilityByDay(prev => ({
-                    ...prev,
-                    [currentDay]: [...prev[currentDay], newTimeRange]
-                }));
-            }
-        } else {
-            Alert.alert("Invalid Time Range", "End time must be after start time");
-        }
-    };
-
-    const closeAllPickers = () => {
-        setTimePickerVisible(false);
-        setShowIOSStartPicker(false);
-        setShowIOSEndPicker(false);
-    };
-
-    const removeTimeRange = (id) => {
-        const currentDay = daysOfWeek[currentDayIndex];
-        setAvailabilityByDay(prev => ({
-            ...prev,
-            [currentDay]: prev[currentDay].filter(range => range.id !== id)
-        }));
-    };
-
-    const goToNextDay = () => {
-        if (currentDayIndex < daysOfWeek.length - 1) {
-            setCurrentDayIndex(currentDayIndex + 1);
-        }
-    };
-
-    const goToPrevDay = () => {
-        if (currentDayIndex > 0) {
-            setCurrentDayIndex(currentDayIndex - 1);
-        }
-    };
-
-    const handleSave = () => {
-        Alert.alert(
-            'Save Confirmation', 
-            'Are you sure you would like to save these preferences?', 
-            [
-                { text: 'Cancel', style: 'cancel' },
-                { 
-                    text: 'OK', 
-                    onPress: () => {
-                        //SEND LOGGED DATA TO FIREBASE HERE 
-                        console.log('Saved availability:', availabilityByDay);
-                        navigation.navigate('GroupScreen');
-                    } 
-                },
-            ]
-        );
-    };
-
-    const doTimeRangesOverlap = (range1, range2) => {
-        return (
-        (range1.start <= range2.start && range1.end > range2.start) || 
-        (range1.start >= range2.start && range1.start < range2.end) || 
-        (range1.start.getTime() === range2.start.getTime() && range1.end.getTime() === range2.end.getTime()) 
-        );
-    };
-    
-    const hasOverlap = (newRange, existingRanges) => {
-        return existingRanges.some(existingRange => 
-        doTimeRangesOverlap(newRange, existingRange)
-        );
-    };
-
-    //potential feature to be added later - sorting availabilities
-    // const sortTimeRanges = (ranges) => {
-    //     return [...ranges].sort((a, b) => a.start.getTime() - b.start.getTime());
-    // };
-
-    const currentDay = daysOfWeek[currentDayIndex];
-    const dayAvailability = availabilityByDay[currentDay] || [];
-
-    return (
-        <SafeAreaView style={styles.container}>
-            
-            <View style={styles.headerContainer}>
-                <Text style={styles.title}>When's The Move?</Text>
-            </View>
-    
-            
-            <View style={styles.contentWrapper}>
-                
-                <View style={styles.dayNavigation}>
-                    <TouchableOpacity 
-                        style={[styles.navButton, currentDayIndex === 0 && styles.disabledButton]} 
-                        onPress={goToPrevDay}
-                        disabled={currentDayIndex === 0}
-                    >
-                        <Text style={styles.navButtonText}>Previous</Text>
-                    </TouchableOpacity>
-                    
-                    <View style={styles.dayHeader}>
-                        <Text style={styles.dayHeaderText}>{currentDay}</Text>
-                    </View>
-                    
-                    <TouchableOpacity 
-                        style={[styles.navButton, currentDayIndex === daysOfWeek.length - 1 && styles.disabledButton]} 
-                        onPress={goToNextDay}
-                        disabled={currentDayIndex === daysOfWeek.length - 1}
-                    >
-                        <Text style={styles.navButtonText}>Next</Text>
-                    </TouchableOpacity>
+        <ScrollView style={styles.availabilityList}>
+          {list.length
+            ? list.map(r=>(
+                <View key={r.id} style={styles.timeRangeCard}>
+                  <Text style={styles.timeRangeText}>
+                    {formatTime(r.start)} - {formatTime(r.end)}
+                  </Text>
+                  <TouchableOpacity
+                    style={styles.removeButton}
+                    onPress={()=>removeRange(r.id)}
+                  >
+                    <Text style={styles.removeButtonText}>✕</Text>
+                  </TouchableOpacity>
                 </View>
-                
-                
-                <ScrollView style={styles.availabilityList}>
-                    {dayAvailability.length > 0 ? (
-                        dayAvailability.map((range) => (
-                            <View key={range.id} style={styles.timeRangeCard}>
-                                <Text style={styles.timeRangeText}>
-                                    {formatTime(range.start)} - {formatTime(range.end)}
-                                </Text>
-                                <TouchableOpacity 
-                                    style={styles.removeButton}
-                                    onPress={() => removeTimeRange(range.id)}
-                                >
-                                    <Text style={styles.removeButtonText}>✕</Text>
-                                </TouchableOpacity>
-                            </View>
-                        ))
-                    ) : (
-                        <View style={styles.emptyState}>
-                            <Text style={styles.emptyStateText}>No availability times added for {currentDay}</Text>
-                        </View>
-                    )}
-                </ScrollView>
-                
-                
-                <TouchableOpacity 
-                    style={styles.addButton} 
-                    onPress={addAvailability}
-                >
-                    <Text style={styles.addButtonText}>+ Add Availability</Text>
+              ))
+            : <View style={styles.emptyState}>
+                <Text style={styles.emptyStateText}>
+                  No busy times added for {day}
+                </Text>
+              </View>
+          }
+        </ScrollView>
+
+        <TouchableOpacity style={styles.addButton} onPress={addBusy}>
+          <Text style={styles.addButtonText}>+ Add Busy Time</Text>
+        </TouchableOpacity>
+      </View>
+
+      {/* Android picker */}
+      {Platform.OS==='android' && isTimePickerVisible && (
+        <Modal transparent visible animationType="fade" onRequestClose={()=>setTimePickerVisible(false)}>
+          <TouchableWithoutFeedback onPress={()=>setTimePickerVisible(false)}>
+            <View style={styles.modalOverlay}>
+              <TouchableWithoutFeedback>
+                <View style={styles.modalContent}>
+                  <Text style={styles.modalTitle}>
+                    {isStart ? 'Select Start Time' : 'Select End Time'}
+                  </Text>
+                  <DateTimePicker
+                    value={selectedTime}
+                    mode="time"
+                    display="default"
+                    onChange={handleTimeChange}
+                    minuteInterval={5}
+                  />
+                  <View style={styles.modalButtonRow}>
+                    <TouchableOpacity
+                      style={styles.modalButton}
+                      onPress={()=>{
+                        if (isStart) {
+                          setIsStart(false);
+                          setTempRange({ start:selectedTime, end:null });
+                        } else {
+                          handleIOSEnd();
+                          setTimePickerVisible(false);
+                        }
+                      }}
+                    >
+                      <Text style={styles.modalButtonText}>
+                        {isStart?'Next':'Done'}
+                      </Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={styles.modalButton}
+                      onPress={()=>setTimePickerVisible(false)}
+                    >
+                      <Text style={styles.modalButtonText}>Cancel</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              </TouchableWithoutFeedback>
+            </View>
+          </TouchableWithoutFeedback>
+        </Modal>
+      )}
+
+      {/* iOS picker */}
+      {Platform.OS==='ios' && (showIOSStart || showIOSEnd) && (
+        <Modal transparent animationType="fade">
+          <View style={styles.iosPickerOverlay}>
+            <View style={styles.iosPickerWrapper}>
+              <View style={styles.iosPickerHeader}>
+                <TouchableOpacity onPress={closeAll}><Text style={styles.iosPickerCancelText}>Cancel</Text></TouchableOpacity>
+                <Text style={styles.iosPickerTitle}>
+                  {showIOSStart?'Select Start Time':'Select End Time'}
+                </Text>
+                <TouchableOpacity onPress={showIOSStart?handleIOSStart:handleIOSEnd}>
+                  <Text style={styles.iosPickerDoneText}>Done</Text>
                 </TouchableOpacity>
+              </View>
+              <DateTimePicker
+                value={selectedTime}
+                mode="time"
+                display="spinner"
+                onChange={handleTimeChange}
+                minuteInterval={5}
+              />
             </View>
-            
-            
-            {Platform.OS === 'android' && (
-                <Modal
-                    transparent={true}
-                    visible={isTimePickerVisible}
-                    animationType="fade"
-                    onRequestClose={() => setTimePickerVisible(false)}
-                >
-                    <TouchableWithoutFeedback onPress={() => setTimePickerVisible(false)}>
-                        <View style={styles.modalOverlay}>
-                            <TouchableWithoutFeedback>
-                                <View style={styles.modalContent}>
-                                    <Text style={styles.modalTitle}>
-                                        {isStartTime ? 'Select Start Time' : 'Select End Time'}
-                                    </Text>
-                                    
-                                    <DateTimePicker
-                                        value={selectedTime}
-                                        mode="time"
-                                        is24Hour={false}
-                                        display="default"
-                                        onChange={handleTimeChange}
-                                        textColor="#000000" // Add text color for visibility
-                                        minuteInterval={5}
-                                        themeVariant='dark'
-                                    />
-                                    
-                                    <View style={styles.modalButtonRow}>
-                                        <TouchableOpacity 
-                                            style={styles.modalButton}
-                                            onPress={() => setTimePickerVisible(false)}
-                                        >
-                                            <Text style={styles.modalButtonText}>Cancel</Text>
-                                        </TouchableOpacity>
-                                    </View>
-                                </View>
-                            </TouchableWithoutFeedback>
-                        </View>
-                    </TouchableWithoutFeedback>
-                </Modal>
-            )}
-            
-            
-            {Platform.OS === 'ios' && (showIOSStartPicker || showIOSEndPicker) && (
-                <Modal
-                    transparent={true}
-                    visible={showIOSStartPicker || showIOSEndPicker}
-                    animationType="fade"
-                >
-                    <View style={styles.iosPickerOverlay}>
-                        <View style={styles.iosPickerWrapper}>
-                            <View style={styles.iosPickerHeader}>
-                                <TouchableOpacity onPress={closeAllPickers} style={styles.iosPickerButton}>
-                                    <Text style={styles.iosPickerCancelText}>Cancel</Text>
-                                </TouchableOpacity>
-                                
-                                <Text style={styles.iosPickerTitle}>
-                                    {showIOSStartPicker ? 'Select Start Time' : 'Select End Time'}
-                                </Text>
-                                
-                                <TouchableOpacity 
-                                    onPress={showIOSStartPicker ? handleIOSStartConfirm : handleIOSEndConfirm}
-                                    style={styles.iosPickerButton}
-                                >
-                                    <Text style={styles.iosPickerDoneText}>Done</Text>
-                                </TouchableOpacity>
-                            </View>
-                            
-                            <View style={styles.iosPickerContainer}>
-                                <DateTimePicker
-                                    value={selectedTime}
-                                    mode="time"
-                                    is24Hour={false}
-                                    display="spinner"
-                                    onChange={handleTimeChange}
-                                    style={styles.iosPicker}
-                                    textColor="#000000" 
-                                    minuteInterval={5}
-                                    themeVariant='dark'
-                                />
-                            </View>
-                        </View>
-                    </View>
-                </Modal>
-            )}
-    
-            
-            {!isAnyPickerVisible() && (
-                <View style={styles.buttonRow}>
-                    <TouchableOpacity 
-                        style={styles.button} 
-                        onPress={() => navigation.navigate('GroupScreen')}
-                    >
-                        <Text style={styles.buttonText}>Skip this for now</Text>
-                    </TouchableOpacity>
-        
-                    <TouchableOpacity 
-                        style={styles.saveBtn} 
-                        onPress={handleSave}
-                    >
-                        <Text style={styles.buttonText}>Save</Text>
-                    </TouchableOpacity>
-                </View>
-            )}
-        </SafeAreaView>
-    );
+          </View>
+        </Modal>
+      )}
+
+      {!isAnyPickerVisible() && (
+        <View style={styles.buttonRow}>
+          <TouchableOpacity
+            style={styles.button}
+            onPress={()=>navigation.navigate('GroupScreen',{username,userGroups:[]})}
+          >
+            <Text style={styles.buttonText}>Skip this for now</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.saveBtn} onPress={handleSave}>
+            <Text style={styles.buttonText}>Save</Text>
+          </TouchableOpacity>
+        </View>
+      )}
+    </SafeAreaView>
+  );
 };
+
 
 const styles = StyleSheet.create({
     container: {
