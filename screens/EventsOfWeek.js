@@ -32,7 +32,7 @@ const EventsOfWeek = ({ navigation, route }) => {
         const slices = docSnap.data()?.slices || {};
 
         const filtered = Object.entries(slices).filter(
-          ([, sliceData]) => sliceData.days?.includes(selectedDay)
+          ([, sliceData]) => sliceData.day?.includes(selectedDay)
         );
 
         setEventData(Object.fromEntries(filtered));
