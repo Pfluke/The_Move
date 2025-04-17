@@ -101,7 +101,7 @@ const EventScreen = ({ navigation, route }) => {
           {sortedDaysOfWeek.map((day, index) => (
             <TouchableOpacity
               key={index}
-              onPress={() => navigation.navigate('DayCalendar', { selectedDay: day, username, groupName })}
+              onPress={() => navigation.navigate('EventsOfWeek', { selectedDay: day, username, groupName, initialEventData: slices, })}
               style={[
                 styles.dayButton,
                 // Highlight today's button
@@ -121,6 +121,7 @@ const EventScreen = ({ navigation, route }) => {
             style={styles.weekEventsButton}
             onPress={() =>
               navigation.navigate('EventsOfWeek', {
+                selectedDay: "WEEK",
                 username,
                 groupName,
                 initialEventData: slices,
