@@ -3,6 +3,7 @@ import { View, Text, Button, Alert, StyleSheet, ScrollView, TouchableOpacity, Im
 import { getFirestore, doc, onSnapshot, updateDoc, getDoc, setDoc } from 'firebase/firestore';
 import { app } from '../firebaseConfig';
 import { MaterialIcons } from '@expo/vector-icons';
+import AddEventModal from './AddEventModal';
 
 const db = getFirestore(app);
 
@@ -10,6 +11,7 @@ const EventScreen = ({ navigation, route }) => {
   const { username, groupName = 'default_group' } = route.params || {};
   const [slices, setSlices] = useState({});
   const [loadingSlices, setLoadingSlices] = useState(true);
+  const [showEventModal, setShowEventModal] = useState(false);
 
   const groupDocRef = doc(db, "groups", groupName);
 
@@ -60,6 +62,24 @@ const EventScreen = ({ navigation, route }) => {
 
   const sortedDaysOfWeek = getSortedDays();
 
+  const handleEventSubmit = async (eventData) => {
+    const { title, ...rest } = eventData;
+    try {
+      const groupRef = doc(db, 'groups', groupName);
+      const docSnap = await getDoc(groupRef);
+      await updateDoc(groupRef, {
+        [`slices.${title}`]: {
+          votes: 0,
+          voters: {},
+          ...rest,
+        },
+      });
+      Alert.alert('Event Added', 'Successfully added event!');
+      setShowEventModal(false);
+    } catch (error) {
+      Alert.alert('Error', error.message);
+    }
+  };
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor:"white" }}>
@@ -139,8 +159,8 @@ const EventScreen = ({ navigation, route }) => {
             <TouchableOpacity
               style={styles.customButton}
               onPress={() => 
-                navigation.navigate('AddSliceScreen', { groupName }
-              )}
+                setShowEventModal(true)
+              }
             >
               <MaterialIcons
                 name="add"
@@ -154,6 +174,11 @@ const EventScreen = ({ navigation, route }) => {
             </TouchableOpacity>
           </View>
         </View>
+        <AddEventModal
+          visible={showEventModal}
+          onClose={() => setShowEventModal(false)}
+          onSubmit={handleEventSubmit}
+        />
         </KeyboardAvoidingView>
     </SafeAreaView>
   );

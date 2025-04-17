@@ -69,7 +69,7 @@ const Event = ({ route, navigation }) => {
         <Text style={styles.time}>
           {eventData.startTime} - {eventData.endTime}
         </Text>
-        <Text style={styles.days}>{eventData.days ? eventData.days.join(', ') : 'No day assigned'}</Text>
+        <Text style={styles.days}>{eventData.day ? eventData.day : 'No day assigned'}</Text>
       </View>
 
       <Button title="Go to Group Screen" onPress={() => navigation.navigate('GroupScreen', { username })} />

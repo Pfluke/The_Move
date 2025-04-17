@@ -240,7 +240,7 @@ const EventsOfWeek = ({ navigation, route }) => {
                           <View style={styles.eventDetailsColumn}>
                             <Text style={styles.cardTitle}>{eventKey}</Text>
                             <Text style={styles.cardDetails}>
-                              {data.days ? data.days.join(", ") : "No day assigned"} | {data.startTime} - {data.endTime}
+                                {data.day ? data.day : "No day assigned"} | {data.startTime} - {data.endTime}
                             </Text>
                           </View>
 
