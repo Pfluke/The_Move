@@ -7,7 +7,7 @@ import WelcomeScreen from './screens/WelcomeScreen';
 import LoginScreen from './screens/LoginScreen';
 import GroupScreen from './screens/GroupScreen';
 import EventScreen from './screens/EventScreen';
-import AddSliceScreen from './screens/AddSliceScreen';
+// import AddEventScreen from './screens/AddEventScreen';
 import DayCalendar from './screens/DayCalendar';
 import Event from './screens/Event';
 import WheelOfFortune from './screens/WheelOfFortune';
@@ -41,7 +41,11 @@ const App = () => {
           headerShown: false, 
         }}
         />
-        <Stack.Screen name="AddSliceScreen" component={AddSliceScreen} />
+        {/* <Stack.Screen name="AddEventScreen" component={AddEventScreen} 
+        options={{
+          headerShown: false, 
+        }}
+        /> */}
         <Stack.Screen name="DayCalendar" component={DayCalendar} />
         <Stack.Screen name="Event" component={Event} />
         <Stack.Screen name="WheelOfFortune" component={WheelOfFortune} />
