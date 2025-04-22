@@ -94,7 +94,7 @@ const AddEventModal = ({ visible, onClose, onSubmit }) => {
                     style={styles.input}
                     onSubmitEditing={() => Keyboard.dismiss()}
                   />
-                  <Text style={styles.details}>Event Details (Optional)</Text>
+                  <Text style={styles.details}>Optional: Event Details</Text>
                   <TextInput
                     placeholder="Event Details"
                     placeholderTextColor="#888"
