@@ -92,8 +92,12 @@ const EventScreen = ({ navigation, route }) => {
         >
   
         {/* Group Name */}
-        <View style={styles.groupTextContainer}>
-          <Text style={styles.groupText}>{groupName}</Text>
+        <View style={styles.headerContainer}>
+          <View style={styles.groupNameContainer}>
+            <Text style={styles.groupNameText}>{groupName}</Text>
+            {/* remove underline if we want */}
+            <View style={styles.underline} /> 
+          </View>
         </View>
 
         {/* Day Buttons */}
@@ -190,58 +194,28 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#FFFFFF',
   },
-  header: { // bubble text style
-    fontSize: 18,
-    color: 'white',
+  headerContainer: { // header container styling
+    backgroundColor: '#FFFFFF',
+    paddingTop: 15,
+    paddingBottom: 15,
   },
-  headerContainer: {
-    backgroundColor: '#007AFF',
-    marginLeft: 14,
-    marginBottom: 2,
-    marginTop: 15,
-    paddingTop: 2,
-    paddingBottom: 2,
-    paddingLeft: 8,
-    paddingRight: 8,
-    borderRadius: 20,
-    alignSelf: 'flex-start',
+  groupNameContainer: { // group name container
+    alignItems: 'center',
+    paddingHorizontal: 15,
   },
-  textBubbleBig: {
-    backgroundColor: '#007AFF',
-    borderRadius: 10,
-    marginLeft: 10,
-    alignSelf: 'flex-start',
-    marginTop: 2,
-  },
-  textBubbleSmall: {
-    backgroundColor: '#007AFF',
-    borderRadius: 10,
-    marginTop: 0,
-    marginLeft: 5,
-    marginBottom: 10,
-    alignSelf: 'flex-start',
-    marginTop: 2,
-  },
-  groupText: {
-    fontSize: 45,
-    fontWeight: 'bold',
+  groupNameText: { // text styling for group name
+    fontSize: 43,
+    fontWeight: '800',
     color: '#000000',
     textAlign: 'center',
+    textTransform: 'uppercase', 
   },
-  groupTextContainer: {
-    backgroundColor: '#F5F5F5',
-    borderWidth: 0.5,
-    borderColor: 'black',
-    borderRadius: 10,
-    padding: 5,
-    marginVertical: 10,
-    alignSelf: 'center',
-    width: '90%',
-  },
-  noEventsText: {
-    fontSize: 16,
-    color: '#888',
-    textAlign: 'center',
+  underline: { 
+    height: 4,
+    width: '40%',
+    backgroundColor: 'black',
+    marginTop: 8,
+    borderRadius: 2,
   },
   weekEventsContainer:{
     justifyContent: 'space-around',
@@ -274,7 +248,10 @@ const styles = StyleSheet.create({
   },
   dayButtonText: {
     color: 'white',
-    fontSize: 24,
+    fontSize: 22,
+    fontWeight: '600',
+    textTransform: 'uppercase', 
+    alignItems: 'center',
   },
   bottomButtonContainer: {
     flexDirection: "row",
