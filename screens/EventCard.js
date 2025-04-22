@@ -107,7 +107,7 @@ const EventCard = () => {
               🕒 {eventData.startTime} - {eventData.endTime}
             </Text>
             <Text style={styles.detailText}>
-              📅 {eventData.days.join(', ')}
+              📅 {eventData.day(', ')}
             </Text>
             <Text style={styles.detailText}>
               📍 {eventData.location}

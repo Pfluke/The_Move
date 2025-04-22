@@ -1,7 +1,13 @@
 import React, { useState, useRef } from 'react';
-import { View, TextInput, Text, StyleSheet, TouchableOpacity, Alert, Keyboard, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
-import { getFirestore, doc, getDoc, setDoc, collection, query, where, getDocs } from 'firebase/firestore';
-import { app } from '../firebaseConfig'; // Adjust the import path as needed
+import {
+  View, TextInput, Text, StyleSheet, TouchableOpacity,
+  Alert, Keyboard, KeyboardAvoidingView, Platform, ScrollView
+} from 'react-native';
+import {
+  getFirestore, doc, getDoc, setDoc,
+  collection, query, where, getDocs
+} from 'firebase/firestore';
+import { app } from '../firebaseConfig';
 
 const db = getFirestore(app);
 
@@ -10,98 +16,88 @@ const LoginScreen = ({ navigation }) => {
   const [password, setPassword] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
   const [loginMessage, setLoginMessage] = useState('');
-
-  // Create a ref for the password input
   const passwordInputRef = useRef(null);
 
-  const showError = (message) => {
-    setErrorMessage(message);
+  const showError = msg => {
+    setErrorMessage(msg);
     setTimeout(() => setErrorMessage(''), 2000);
   };
 
-  // Handle login using Firestore
   const handleLogin = async () => {
-    if (username && password) {
-      try {
-        const userDocRef = doc(db, 'users', username.toLowerCase());
-        const userDoc = await getDoc(userDocRef);
-        if (userDoc.exists()) {
-          const userData = userDoc.data();
-          if (userData.password === password) {
-            setLoginMessage('Login successful!');
-            const groupsQuery = query(
-              collection(db, 'groups'),
-              where('members', 'array-contains', username.toLowerCase()),
-            );
-            const groupsSnapshot = await getDocs(groupsQuery);
-            const userGroups = [];
-            groupsSnapshot.forEach((docSnap) => {
-              userGroups.push(docSnap.id);
-            });
-
-            navigation.navigate('GroupScreen', { username, userGroups });
-          } else {
-            showError('Incorrect password');
-          }
-        } else {
-          showError('User does not exist');
-        }
-      } catch (error) {
-        console.error('Error during login', error);
-        showError(error.message);
+    if (!username || !password) {
+      return showError('PLEASE ENTER BOTH A USERNAME AND PASSWORD');
+    }
+    try {
+      const userRef = doc(db, 'users', username.toLowerCase());
+      const userSnap = await getDoc(userRef);
+      if (!userSnap.exists()) {
+        return showError('User does not exist');
       }
-    } else {
-      showError('PLEASE ENTER BOTH A USERNAME AND PASSWORD');
+      const data = userSnap.data();
+      if (data.password !== password) {
+        return showError('Incorrect password');
+      }
+
+      setLoginMessage('Login successful!');
+      // fetch groups
+      const groupsQuery = query(
+        collection(db, 'groups'),
+        where('members', 'array-contains', username.toLowerCase())
+      );
+      const groupsSnap = await getDocs(groupsQuery);
+      const userGroups = [];
+      groupsSnap.forEach(d => userGroups.push(d.id));
+
+      navigation.navigate('GroupScreen', { username, userGroups });
+    } catch (err) {
+      console.error(err);
+      showError(err.message);
     }
   };
 
-  // Handle account creation using Firestore
   const handleCreate = async () => {
-    if (username && password) {
-      try {
-        const userDocRef = doc(db, 'users', username.toLowerCase());
-        const userDoc = await getDoc(userDocRef);
-        if (userDoc.exists()) {
-          setErrorMessage(`User '${username}' already exists.`);
-          setTimeout(() => setErrorMessage(''), 2000);
-        } else {
-          await setDoc(userDocRef, { username: username.toLowerCase(), password });
-          setLoginMessage('Account created successfully!');
-          navigation.navigate('GroupScreen', { username, userGroups: [] });
-        }
-      } catch (error) {
-        console.error('Error creating account', error);
-        setErrorMessage(error.message);
-        setTimeout(() => setErrorMessage(''), 2000);
+    if (!username || !password) {
+      return showError('PLEASE ENTER BOTH A USERNAME AND PASSWORD');
+    }
+    try {
+      const userRef = doc(db, 'users', username.toLowerCase());
+      const userSnap = await getDoc(userRef);
+      if (userSnap.exists()) {
+        return showError(`User '${username}' already exists.`);
       }
-    } else {
-      setErrorMessage('PLEASE ENTER BOTH A USERNAME AND PASSWORD');
-      setTimeout(() => setErrorMessage(''), 2000);
+      // create with empty busyTimes
+      await setDoc(userRef, {
+        username: username.toLowerCase(),
+        password,
+        busyTimes: {}
+      });
+      setLoginMessage('Account created successfully!');
+      navigation.navigate('InputSchedule', { username });
+    } catch (err) {
+      console.error(err);
+      showError(err.message);
     }
   };
 
-  // Handle key press for Enter key submission (Login)
-  const handleKeyPress = (e) => {
+  const handleKeyPress = e => {
     if (e.nativeEvent.key === 'Enter') {
-      Keyboard.dismiss(); // Dismiss keyboard on Enter press
-      handleLogin(); // Trigger login
+      Keyboard.dismiss();
+      handleLogin();
     } else if (e.nativeEvent.key === 'Tab') {
-      e.preventDefault(); // Prevent the default tab behavior
-      passwordInputRef.current.focus(); // Focus the password input using the ref
+      e.preventDefault();
+      passwordInputRef.current.focus();
     }
   };
 
   return (
     <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'} // behavior based off platform
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       style={styles.container}
-      // keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0} // offset adjustment
     >
-      <ScrollView // wrap the content in a scroll view
-        contentContainerStyle={styles.scrollContainer} // Ensure the content is scrollable
-        keyboardShouldPersistTaps="handled" // Allow taps to dismiss the keyboard
+      <ScrollView
+        contentContainerStyle={styles.scrollContainer}
+        keyboardShouldPersistTaps="handled"
       >
-        {/* Title Section */}
         <View style={styles.titleContainer}>
           <View style={styles.titleTransformContainer}>
             <Text style={styles.title}>THE MOVE</Text>
@@ -110,18 +106,13 @@ const LoginScreen = ({ navigation }) => {
           <View style={styles.headerContainer}>
             <Text style={styles.header}>...okay, but what is it??</Text>
           </View>
-          <View style={styles.textBubbleBig}>
-            <Text style={{ fontSize: 9 }}>       </Text>
-          </View>
-          <View style={styles.textBubbleSmall}>
-            <Text style={{ fontSize: 6 }}>    </Text>
-          </View>
+          <View style={styles.textBubbleBig}><Text style={{fontSize:9}}> </Text></View>
+          <View style={styles.textBubbleSmall}><Text style={{fontSize:6}}> </Text></View>
         </View>
 
-        {/* Login Section */}
         <View style={styles.loginContainer}>
           <Text style={styles.login}>LOG IN</Text>
-          <View style={styles.loginUnderline}></View>
+          <View style={styles.loginUnderline}/>
           {errorMessage ? <Text style={styles.errorText}>{errorMessage}</Text> : null}
           <TextInput
             style={styles.input}
@@ -130,7 +121,7 @@ const LoginScreen = ({ navigation }) => {
             value={username}
             onChangeText={setUsername}
             returnKeyType="next"
-            onKeyPress={handleKeyPress} // Listen for Enter key press
+            onKeyPress={handleKeyPress}
           />
           <TextInput
             style={styles.input}
@@ -138,32 +129,19 @@ const LoginScreen = ({ navigation }) => {
             placeholderTextColor="#888"
             value={password}
             onChangeText={setPassword}
-            secureTextEntry={true}
-            returnKeyType="done" // Set the return key to "Done"
-            ref={passwordInputRef} // Assign the ref to the password input
-            onKeyPress={handleKeyPress} // Listen for Enter key press
+            secureTextEntry
+            returnKeyType="done"
+            ref={passwordInputRef}
+            onKeyPress={handleKeyPress}
           />
 
-          {/* Create Account Button */}
-          <TouchableOpacity
-            style={styles.button}
-            onPress={handleCreate}
-            activeOpacity={0.7}
-          >
+          <TouchableOpacity style={styles.button} onPress={handleCreate}>
             <Text style={styles.buttonText}>CREATE ACCOUNT</Text>
           </TouchableOpacity>
-
-          <View style={styles.buttonSpacer} />
-
-          {/* Login Button */}
-          <TouchableOpacity
-            style={styles.button}
-            onPress={handleLogin}
-            activeOpacity={0.7}
-          >
+          <View style={styles.buttonSpacer}/>
+          <TouchableOpacity style={styles.button} onPress={handleLogin}>
             <Text style={styles.buttonText}>LOGIN</Text>
           </TouchableOpacity>
-
           {loginMessage ? <Text style={styles.successText}>{loginMessage}</Text> : null}
         </View>
       </ScrollView>
