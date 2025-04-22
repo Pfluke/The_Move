@@ -83,7 +83,7 @@ const Event = ({ route, navigation }) => {
 
           <Text style={styles.cardTitle}>Days:</Text>
           <Text style={styles.cardContent}>
-            {eventData.day || 'No days assigned'}
+                {eventData.day || 'No day assigned'}
           </Text>
         </View>
       </ScrollView>
