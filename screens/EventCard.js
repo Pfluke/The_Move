@@ -165,9 +165,15 @@ const EventCard = ({ navigation, route }) => {
           <Text style={styles.eventTitle}>{eventData.name}</Text>
 
           <View style={styles.detailsContainer}>
-            <Text style={styles.detailText}>🕒 {eventData.startTime} - {eventData.endTime}</Text>
-            <Text style={styles.detailText}>📅 {eventData.day || "NO DAY"}</Text>
-            <Text style={styles.detailText}>📍 {eventData.location || 'No location'}</Text>
+            <Text style={styles.detailText}>
+              🕒 {eventData.startTime} - {eventData.endTime}
+            </Text>
+            <Text style={styles.detailText}>
+              📅 {eventData.day}
+            </Text>
+            <Text style={styles.detailText}>
+              📍 {eventData.location}
+            </Text>
           </View>
 
           <ScrollView
