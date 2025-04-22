@@ -253,7 +253,7 @@ export default function AddEventModal({ visible, onClose, onSubmit }) {
                         style={styles.timePicker}
                         onValueChange={val=>{ console.log('startTime->',val); setStartTime(val); }}
                       >
-                        {timeOptions.map(t=> <Picker.Item key={t} label={t} value={t}/> )}
+                        {timeOptions.map(t=> <Picker.Item key={t} label={t} value={t} color='black'/> )}
                       </Picker>
                     </View>
                   </View>
@@ -265,7 +265,7 @@ export default function AddEventModal({ visible, onClose, onSubmit }) {
                         style={styles.timePicker}
                         onValueChange={val=>{ console.log('endTime->',val); setEndTime(val); }}
                       >
-                        {timeOptions.map(t=> <Picker.Item key={t} label={t} value={t}/> )}
+                        {timeOptions.map(t=> <Picker.Item key={t} label={t} value={t} color='black'/> )}
                       </Picker>
                     </View>
                   </View>
@@ -330,9 +330,9 @@ const styles = StyleSheet.create({
   dayOptionText:{ fontSize:18}, selectedDayText:{ fontSize:16,fontWeight:'bold',color:'#2E7D32'},
   timeContainer:{ flexDirection:'row',justifyContent:'space-between',marginVertical:8},
   timeColumn:{ flex:1,marginHorizontal:4},
-  timeLabel:{ fontSize:14,fontWeight:'bold',alignSelf:'center'},
+  timeLabel:{ fontSize:16,fontWeight:'bold',alignSelf:'center'},
   timePickerContainer:{ borderRadius:5,borderWidth:1,borderColor:'black',overflow:'hidden'},
-  timePicker:{ height:140},
+  timePicker:{ height:140,},
   summaryText:{ fontSize:18,marginVertical:5},
   buttonRow:{ flexDirection:'row',justifyContent:'space-evenly',marginTop:20},
   cancelButton:{ padding:10,backgroundColor:'#ffdddd',borderRadius:3,borderWidth:2,width:'40%',alignItems:'center'},
