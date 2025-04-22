@@ -41,11 +41,6 @@ const App = () => {
           headerShown: false, 
         }}
         />
-        {/* <Stack.Screen name="AddEventScreen" component={AddEventScreen} 
-        options={{
-          headerShown: false, 
-        }}
-        /> */}
         <Stack.Screen name="DayCalendar" component={DayCalendar} />
         <Stack.Screen name="Event" component={Event} />
         <Stack.Screen name="WheelOfFortune" component={WheelOfFortune} />

@@ -8,39 +8,29 @@ import {
   PanResponder, 
   Dimensions,
   ScrollView,
-  TouchableOpacity
+  TouchableOpacity,
+  SafeAreaView,
+  StatusBar
 } from 'react-native';
+import { useRoute, useNavigation } from '@react-navigation/native';
+import { MaterialIcons } from '@expo/vector-icons';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 const EventCard = () => {
-  // Hardcoded event data
-  const eventData = {
-    name: "Friday Night Party",
-    description: "Weekly social gathering with music and drinks. This event is open to all members and friends. Come enjoy live music, great food, and amazing company! We'll have special guests this week including a live DJ and mixology demonstrations. Don't forget to bring your friends - the first 50 attendees get free drink tickets!\n\nLocation: The Rooftop Lounge\nDress Code: Smart Casual\nAge Limit: 21+",
-    startTime: "8:00 PM",
-    endTime: "11:30 PM",
-    days: ["Friday"],
-    location: "The Rooftop Lounge, 123 Main St",
-    imageUri: "https://images.unsplash.com/photo-1514525253161-7a46d19cd819"
-  };
+  const route = useRoute();
+  const navigation = useNavigation();
+  const { event } = route.params;
 
-  // Animation values
   const pan = useRef(new Animated.ValueXY()).current;
   const scrollViewRef = useRef(null);
-  const isScrolling = useRef(false);
 
   const panResponder = PanResponder.create({
-    onStartShouldSetPanResponder: (_, gestureState) => {
-      return gestureState.numberActiveTouches === 2;
-    },
-    onMoveShouldSetPanResponder: (_, gestureState) => {
-      return gestureState.numberActiveTouches === 2 && 
-             Math.abs(gestureState.dx) > Math.abs(gestureState.dy);
-    },
+    onStartShouldSetPanResponder: (_, gestureState) => gestureState.numberActiveTouches === 2,
+    onMoveShouldSetPanResponder: (_, gestureState) => 
+      gestureState.numberActiveTouches === 2 && Math.abs(gestureState.dx) > Math.abs(gestureState.dy),
     onPanResponderGrant: () => {
       scrollViewRef.current?.setNativeProps({ scrollEnabled: false });
-      isScrolling.current = false;
     },
     onPanResponderMove: Animated.event(
       [null, { dx: pan.x }],
@@ -48,14 +38,9 @@ const EventCard = () => {
     ),
     onPanResponderRelease: (_, gesture) => {
       scrollViewRef.current?.setNativeProps({ scrollEnabled: true });
-      
-      if (gesture.dx > 120) {
-        swipeCard('right');
-      } else if (gesture.dx < -120) {
-        swipeCard('left');
-      } else {
-        resetPosition();
-      }
+      if (gesture.dx > 120) swipeCard('right');
+      else if (gesture.dx < -120) swipeCard('left');
+      else resetPosition();
     },
     onPanResponderTerminate: () => {
       resetPosition();
@@ -75,127 +60,128 @@ const EventCard = () => {
   const resetPosition = () => {
     Animated.spring(pan.x, {
       toValue: 0,
-      friction: 4,
+      friction: 5,
       useNativeDriver: false
     }).start();
   };
 
   return (
-    <View style={styles.container}>
-      <Animated.View
-        {...panResponder.panHandlers}
-        style={[
-          styles.card,
-          {
-            transform: [
-              { translateX: pan.x }
-            ]
-          }
-        ]}
-      >
-        <Image 
-          source={{ uri: eventData.imageUri }} 
-          style={styles.cardImage}
-          resizeMode="cover"
-        />
+    <SafeAreaView style={styles.safeArea}>
+      <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
 
-        <View style={styles.cardInfo}>
-          <Text style={styles.eventTitle}>{eventData.name}</Text>
-          
-          <View style={styles.detailsContainer}>
-            <Text style={styles.detailText}>
-              🕒 {eventData.startTime} - {eventData.endTime}
-            </Text>
-            <Text style={styles.detailText}>
-              📅 {eventData.days.join(', ')}
-            </Text>
-            <Text style={styles.detailText}>
-              📍 {eventData.location}
-            </Text>
-          </View>
-
-          <ScrollView 
-            ref={scrollViewRef}
-            style={styles.descriptionScroll}
-            contentContainerStyle={styles.scrollContent}
-            scrollEnabled={true}
-          >
-            <Text style={styles.cardDescription}>
-              {eventData.description}
-            </Text>
-          </ScrollView>
-        </View>
-      </Animated.View>
-
-      {/* Accept/Decline Buttons */}
-      <View style={styles.buttonContainer}>
-        <TouchableOpacity 
-          style={[styles.button, styles.declineButton]}
-          onPress={() => swipeCard('left')}
-        >
-          <Text style={[styles.buttonText, styles.declineButtonText]}>Decline</Text>
+      {/* Header with Back Button */}
+      <View style={styles.header}>
+        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+          <MaterialIcons name="arrow-back" size={28} color="#000" />
         </TouchableOpacity>
-        <TouchableOpacity 
-          style={[styles.button, styles.acceptButton]}
-          onPress={() => swipeCard('right')}
-        >
-          <Text style={[styles.buttonText, styles.acceptButtonText]}>Accept</Text>
-        </TouchableOpacity>
+        <Text style={styles.headerTitle}>Event Details</Text>
+        <View style={styles.backButton} /> {/* Empty to balance layout */}
       </View>
-    </View>
+
+      {/* Card Content */}
+      <View style={styles.container}>
+        <Animated.View
+          {...panResponder.panHandlers}
+          style={[
+            styles.card,
+            { transform: [{ translateX: pan.x }] }
+          ]}
+        >
+
+          <View style={styles.cardInfo}>
+            <Text style={styles.eventTitle}>{event.title}</Text>
+
+            <View style={styles.detailsContainer}>
+              <Text style={styles.detailText}>🕒 {event.startTime} - {event.endTime}</Text>
+              <Text style={styles.detailText}>📅 {event.days.join(', ')}</Text>
+              <Text style={styles.detailText}>📍 {event.location}</Text>
+            </View>
+
+            <ScrollView 
+              ref={scrollViewRef}
+              style={styles.descriptionScroll}
+              contentContainerStyle={styles.scrollContent}
+              scrollEnabled={true}
+            >
+              <Text style={styles.cardDescription}>
+                {event.description}
+              </Text>
+            </ScrollView>
+          </View>
+        </Animated.View>
+      </View>
+    </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
+  safeArea: {
     flex: 1,
     backgroundColor: '#FFFFFF',
-    justifyContent: 'center',
+  },
+  header: {
+    flexDirection: 'row',
     alignItems: 'center',
-    padding: 20
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E0E0E0',
+    backgroundColor: '#FFFFFF',
+  },
+  backButton: {
+    width: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  headerTitle: {
+    flex: 1,
+    fontSize: 22,
+    fontWeight: 'bold',
+    textAlign: 'center',
+    color: '#000',
+  },
+  container: {
+    flex: 1,
+    padding: 20,
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
   },
   card: {
     width: '100%',
-    height: SCREEN_HEIGHT * 0.78, 
+    height: SCREEN_HEIGHT * 0.8,
     borderRadius: 20,
-    backgroundColor: '#F5F5F5',
-    borderWidth: 2,
-    borderColor: '#000',
+    backgroundColor: '#F9F9F9',
     overflow: 'hidden',
-    elevation: 10,
+    borderColor: '#DDD',
+    borderWidth: 1,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.3,
-    shadowRadius: 20,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.1,
+    shadowRadius: 10,
+    elevation: 5,
   },
   cardImage: {
     width: '100%',
     height: '40%',
   },
   cardInfo: {
+    flex: 1,
     padding: 20,
-    backgroundColor: '#FFF',
-    height: '60%',
-    borderTopWidth: 2,
-    borderTopColor: '#000',
+    backgroundColor: '#FFFFFF',
   },
   eventTitle: {
     fontSize: 26,
     fontWeight: 'bold',
-    marginBottom: 15,
     color: '#000',
-    textAlign: 'left',
+    marginBottom: 10,
   },
   detailsContainer: {
     marginBottom: 15,
-    paddingBottom: 15,
-    borderBottomWidth: 1,
-    borderBottomColor: '#EEE',
   },
   detailText: {
-    fontSize: 18,
-    marginBottom: 8,
-    color: '#000',
+    fontSize: 16,
+    color: '#444',
+    marginBottom: 6,
   },
   descriptionScroll: {
     flex: 1,
@@ -205,41 +191,8 @@ const styles = StyleSheet.create({
   },
   cardDescription: {
     fontSize: 16,
-    color: '#333',
+    color: '#666',
     lineHeight: 22,
-  },
-  buttonContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    width: '100%',
-    paddingHorizontal: 20,
-    marginTop: 20,
-  },
-  button: {
-    paddingVertical: 15,
-    paddingHorizontal: 30,
-    borderRadius: 10,
-    borderWidth: 2,
-    minWidth: 150,
-    alignItems: 'center',
-  },
-  declineButton: {
-    borderColor: '#FF6B6B',
-    backgroundColor: '#FF6B6B',
-  },
-  acceptButton: {
-    borderColor: '#51B27E',
-    backgroundColor: '#51B27E',
-  },
-  buttonText: {
-    fontSize: 18,
-    fontWeight: 'bold',
-  },
-  acceptButtonText: {
-    color: '#FFF',
-  },
-  declineButtonText: {
-    color: '#FFF',
   },
 });
 
