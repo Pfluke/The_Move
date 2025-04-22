@@ -22,7 +22,7 @@ const DayCalendar = ({ route, navigation }) => {
 
         // Filter slices that match the selected day
         const filteredSlices = Object.entries(slices).filter(([sliceName, sliceData]) =>
-          sliceData.days?.includes(selectedDay)
+          sliceData.day?.includes(selectedDay)
         );
 
         setSlicesForDay(filteredSlices);
