@@ -103,6 +103,9 @@ const AddEventModal = ({ visible, onClose, onSubmit }) => {
                     onChangeText={setDescription}
                     style={[styles.input, { height: 100 }]}
                     onSubmitEditing={() => Keyboard.dismiss()}
+                    multiline
+                    scrollEnables
+                    textAlignVertical="top"
                   />
                 </>
               )}

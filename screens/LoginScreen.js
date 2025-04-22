@@ -1,7 +1,7 @@
 import React, { useState, useRef } from 'react';
 import {
   View, TextInput, Text, StyleSheet, TouchableOpacity,
-  Alert, Keyboard, KeyboardAvoidingView, Platform, ScrollView
+  Alert, Keyboard, KeyboardAvoidingView, Platform, TouchableWithoutFeedback
 } from 'react-native';
 import {
   getFirestore, doc, getDoc, setDoc,
@@ -90,62 +90,59 @@ const LoginScreen = ({ navigation }) => {
   };
 
   return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      style={styles.container}
-    >
-      <ScrollView
-        contentContainerStyle={styles.scrollContainer}
-        keyboardShouldPersistTaps="handled"
+    <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={styles.container}
       >
-        <View style={styles.titleContainer}>
-          <View style={styles.titleTransformContainer}>
-            <Text style={styles.title}>THE MOVE</Text>
+          <View style={styles.titleContainer}>
+            <View style={styles.titleTransformContainer}>
+              <Text style={styles.title}>THE MOVE</Text>
+            </View>
+            <View style={styles.titleUnderline} />
+            <View style={styles.headerContainer}>
+              <Text style={styles.header}>...okay, but what is it??</Text>
+            </View>
+            <View style={styles.textBubbleBig}><Text style={{fontSize:9}}> </Text></View>
+            <View style={styles.textBubbleSmall}><Text style={{fontSize:6}}> </Text></View>
           </View>
-          <View style={styles.titleUnderline} />
-          <View style={styles.headerContainer}>
-            <Text style={styles.header}>...okay, but what is it??</Text>
+
+          <View style={styles.loginContainer}>
+            <Text style={styles.login}>LOG IN</Text>
+            <View style={styles.loginUnderline}/>
+            {errorMessage ? <Text style={styles.errorText}>{errorMessage}</Text> : null}
+            <TextInput
+              style={styles.input}
+              placeholder="username"
+              placeholderTextColor="#888"
+              value={username}
+              onChangeText={setUsername}
+              returnKeyType="next"
+              onKeyPress={handleKeyPress}
+            />
+            <TextInput
+              style={styles.input}
+              placeholder="password"
+              placeholderTextColor="#888"
+              value={password}
+              onChangeText={setPassword}
+              secureTextEntry
+              returnKeyType="done"
+              ref={passwordInputRef}
+              onKeyPress={handleKeyPress}
+            />
+
+            <TouchableOpacity style={styles.button} onPress={handleCreate}>
+              <Text style={styles.buttonText}>CREATE ACCOUNT</Text>
+            </TouchableOpacity>
+            <View style={styles.buttonSpacer}/>
+            <TouchableOpacity style={styles.button} onPress={handleLogin}>
+              <Text style={styles.buttonText}>LOGIN</Text>
+            </TouchableOpacity>
+            {loginMessage ? <Text style={styles.successText}>{loginMessage}</Text> : null}
           </View>
-          <View style={styles.textBubbleBig}><Text style={{fontSize:9}}> </Text></View>
-          <View style={styles.textBubbleSmall}><Text style={{fontSize:6}}> </Text></View>
-        </View>
-
-        <View style={styles.loginContainer}>
-          <Text style={styles.login}>LOG IN</Text>
-          <View style={styles.loginUnderline}/>
-          {errorMessage ? <Text style={styles.errorText}>{errorMessage}</Text> : null}
-          <TextInput
-            style={styles.input}
-            placeholder="username"
-            placeholderTextColor="#888"
-            value={username}
-            onChangeText={setUsername}
-            returnKeyType="next"
-            onKeyPress={handleKeyPress}
-          />
-          <TextInput
-            style={styles.input}
-            placeholder="password"
-            placeholderTextColor="#888"
-            value={password}
-            onChangeText={setPassword}
-            secureTextEntry
-            returnKeyType="done"
-            ref={passwordInputRef}
-            onKeyPress={handleKeyPress}
-          />
-
-          <TouchableOpacity style={styles.button} onPress={handleCreate}>
-            <Text style={styles.buttonText}>CREATE ACCOUNT</Text>
-          </TouchableOpacity>
-          <View style={styles.buttonSpacer}/>
-          <TouchableOpacity style={styles.button} onPress={handleLogin}>
-            <Text style={styles.buttonText}>LOGIN</Text>
-          </TouchableOpacity>
-          {loginMessage ? <Text style={styles.successText}>{loginMessage}</Text> : null}
-        </View>
-      </ScrollView>
-    </KeyboardAvoidingView>
+      </KeyboardAvoidingView>
+    </TouchableWithoutFeedback>
   );
 };
 

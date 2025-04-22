@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, Button, Alert, StyleSheet, ScrollView, TouchableOpacity, Image, KeyboardAvoidingView, Platform, SafeAreaView ,StatusBar } from 'react-native';
+import { View, Text, Button, Alert, StyleSheet, ScrollView, TouchableOpacity, Image, KeyboardAvoidingView, Platform, SafeAreaView ,StatusBar, TouchableWithoutFeedback, Keyboard } from 'react-native';
 import { getFirestore, doc, onSnapshot, updateDoc, getDoc, setDoc } from 'firebase/firestore';
 import { app } from '../firebaseConfig';
 import { MaterialIcons } from '@expo/vector-icons';
@@ -82,110 +82,112 @@ const EventScreen = ({ navigation, route }) => {
   };
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor:"white" }}>
-      <StatusBar barStyle="dark-content" />
-      {/* black safe background for ios white text at top */}
-        <KeyboardAvoidingView
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-          style={styles.container}
-          keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
-        >
-  
-        {/* Group Name */}
-        <View style={styles.headerContainer}>
-          <View style={styles.groupNameContainer}>
-            <Text style={styles.groupNameText}>{groupName}</Text>
-            {/* remove underline if we want */}
-            <View style={styles.underline} /> 
-          </View>
-        </View>
-
-        {/* Day Buttons */}
-        <View style={styles.dayButtonsContainer}>
-          {sortedDaysOfWeek.map((day, index) => (
-            <TouchableOpacity
-              key={index}
-              onPress={() => navigation.navigate('EventsOfWeek', { selectedDay: day, username, groupName, initialEventData: slices, })}
-              style={[
-                styles.dayButton,
-                // Highlight today's button
-                index === 0 ? styles.todayButton : null
-              ]}
-            >
-              <Text style={styles.dayButtonText}>
-                {day}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-
-        <View style={styles.weekEventsContainer}>
-          {/* Button to view top events of the week */}
-          <TouchableOpacity 
-            style={styles.weekEventsButton}
-            onPress={() =>
-              navigation.navigate('EventsOfWeek', {
-                selectedDay: "WEEK",
-                username,
-                groupName,
-                initialEventData: slices,
-              })
-            }
+    <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+      <SafeAreaView style={{ flex: 1, backgroundColor:"white" }}>
+        <StatusBar barStyle="dark-content" />
+        {/* black safe background for ios white text at top */}
+          <KeyboardAvoidingView
+            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+            style={styles.container}
+            keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
           >
-            <Text style={styles.customButtonText}>
-              View All Events for this Week
-            </Text>
-          </TouchableOpacity>
-        </View>
-        
-        <View style={styles.bottomButtonContainer}>
-
-          {/* Go to Group Screen Button */}
-          <View style={styles.buttonContainer}>
-            <TouchableOpacity
-              style={styles.customButton}
-              onPress={() => 
-                navigation.navigate('GroupScreen', { username})}
-            >
-              <MaterialIcons 
-                name="arrow-back"
-                size={60}
-                color="black"
-                alignSelf='center'
-              />
-              <Text style={styles.customButtonText}>
-                Go To Group Screen
-              </Text>
-            </TouchableOpacity>
+    
+          {/* Group Name */}
+          <View style={styles.headerContainer}>
+            <View style={styles.groupNameContainer}>
+              <Text style={styles.groupNameText}>{groupName}</Text>
+              {/* remove underline if we want */}
+              <View style={styles.underline} /> 
+            </View>
           </View>
 
-          {/* Add Event Button */}
-          <View style={styles.buttonContainer}>
-            <TouchableOpacity
-              style={styles.customButton}
-              onPress={() => 
-                setShowEventModal(true)
+          {/* Day Buttons */}
+          <View style={styles.dayButtonsContainer}>
+            {sortedDaysOfWeek.map((day, index) => (
+              <TouchableOpacity
+                key={index}
+                onPress={() => navigation.navigate('EventsOfWeek', { selectedDay: day, username, groupName, initialEventData: slices, })}
+                style={[
+                  styles.dayButton,
+                  // Highlight today's button
+                  index === 0 ? styles.todayButton : null
+                ]}
+              >
+                <Text style={styles.dayButtonText}>
+                  {day}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+
+          <View style={styles.weekEventsContainer}>
+            {/* Button to view top events of the week */}
+            <TouchableOpacity 
+              style={styles.weekEventsButton}
+              onPress={() =>
+                navigation.navigate('EventsOfWeek', {
+                  selectedDay: "WEEK",
+                  username,
+                  groupName,
+                  initialEventData: slices,
+                })
               }
             >
-              <MaterialIcons
-                name="add"
-                size={60}
-                color="black"
-                alignSelf='center'
-              />
               <Text style={styles.customButtonText}>
-                Add Event
+                View All Events for this Week
               </Text>
             </TouchableOpacity>
           </View>
-        </View>
-        <AddEventModal
-          visible={showEventModal}
-          onClose={() => setShowEventModal(false)}
-          onSubmit={handleEventSubmit}
-        />
-        </KeyboardAvoidingView>
-    </SafeAreaView>
+          
+          <View style={styles.bottomButtonContainer}>
+
+            {/* Go to Group Screen Button */}
+            <View style={styles.buttonContainer}>
+              <TouchableOpacity
+                style={styles.customButton}
+                onPress={() => 
+                  navigation.navigate('GroupScreen', { username })}
+              >
+                <MaterialIcons 
+                  name="arrow-back"
+                  size={60}
+                  color="black"
+                  alignSelf='center'
+                />
+                <Text style={styles.customButtonText}>
+                  Go To Group Screen
+                </Text>
+              </TouchableOpacity>
+            </View>
+
+            {/* Add Event Button */}
+            <View style={styles.buttonContainer}>
+              <TouchableOpacity
+                style={styles.customButton}
+                onPress={() => 
+                  setShowEventModal(true)
+                }
+              >
+                <MaterialIcons
+                  name="add"
+                  size={60}
+                  color="black"
+                  alignSelf='center'
+                />
+                <Text style={styles.customButtonText}>
+                  Add Event
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+          <AddEventModal
+            visible={showEventModal}
+            onClose={() => setShowEventModal(false)}
+            onSubmit={handleEventSubmit}
+          />
+          </KeyboardAvoidingView>
+      </SafeAreaView>
+    </TouchableWithoutFeedback>
   );
 };
 

@@ -9,7 +9,8 @@ import {
   StyleSheet,
   ScrollView,
   Keyboard,
-  Alert
+  Alert,
+  TouchableWithoutFeedback,
 } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
 import { useRoute } from '@react-navigation/native';
@@ -195,121 +196,126 @@ export default function AddEventModal({ visible, onClose, onSubmit }) {
 
   return (
     <Modal visible={visible} transparent animationType="fade">
-      <View style={styles.overlay}>
-        <View style={[
-          step===1 ? styles.titleModalContent :
-          step===2 ? styles.dateAndTimeModalContent :
-          styles.reviewModalContent
-        ]}>
-          <View style={styles.innerModal}>
+      <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+        <View style={styles.overlay}>
+          <View style={[
+            step===1 ? styles.titleModalContent :
+            step===2 ? styles.dateAndTimeModalContent :
+            styles.reviewModalContent
+          ]}>
+            <View style={styles.innerModal}>
 
-            {step===1 && (
-              <>
-                <Text style={styles.header}>Event Title</Text>
-                <TextInput
-                  placeholder="Event Title"
-                  placeholderTextColor="#888"
-                  textAlign="center"
-                  value={title}
-                  onChangeText={setTitle}
-                  style={styles.input}
-                  onSubmitEditing={Keyboard.dismiss}
-                />
-                <Text style={styles.details}>Optional: Event Details</Text>
-                <TextInput
-                  placeholder="Event Details"
-                  placeholderTextColor="#888"
-                  textAlign="center"
-                  value={description}
-                  onChangeText={setDescription}
-                  style={[styles.input,{height:100}]}
-                  onSubmitEditing={Keyboard.dismiss}
-                />
-              </>
-            )}
+              {step===1 && (
+                <>
+                  <Text style={styles.header}>Event Title</Text>
+                  <TextInput
+                    placeholder="Event Title"
+                    placeholderTextColor="#888"
+                    textAlign="center"
+                    value={title}
+                    onChangeText={setTitle}
+                    style={styles.input}
+                    onSubmitEditing={Keyboard.dismiss}
+                  />
+                  <Text style={styles.details}>Optional: Event Details</Text>
+                  <TextInput
+                    placeholder="Event Details"
+                    placeholderTextColor="#888"
+                    textAlign="center"
+                    value={description}
+                    onChangeText={setDescription}
+                    style={[styles.input,{height:100}]}
+                    onSubmitEditing={Keyboard.dismiss}
+                    multiline
+                    scrollEnables
+                    textAlignVertical="top"
+                  />
+                </>
+              )}
 
-            {step===2 && (
-              <>
-                <Text style={styles.header}>Choose Day & Time</Text>
-                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.daySelector}>
-                  {DAYS.map(day=>(
-                    <TouchableOpacity
-                      key={day}
-                      style={[styles.dayOption, selectedDay===day && styles.selectedDay]}
-                      onPress={()=>{ console.log('pick day',day); setSelectedDay(day); }}
-                    >
-                      <Text style={ selectedDay===day ? styles.selectedDayText : styles.dayOptionText }>
-                        {day}
-                      </Text>
+              {step===2 && (
+                <>
+                  <Text style={styles.header}>Choose Day & Time</Text>
+                  <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.daySelector}>
+                    {DAYS.map(day=>(
+                      <TouchableOpacity
+                        key={day}
+                        style={[styles.dayOption, selectedDay===day && styles.selectedDay]}
+                        onPress={()=>{ console.log('pick day',day); setSelectedDay(day); }}
+                      >
+                        <Text style={ selectedDay===day ? styles.selectedDayText : styles.dayOptionText }>
+                          {day}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </ScrollView>
+                  <View style={styles.timeContainer}>
+                    <View style={styles.timeColumn}>
+                      <Text style={styles.timeLabel}>Start Time</Text>
+                      <View style={styles.timePickerContainer}>
+                        <Picker
+                          selectedValue={startTime}
+                          style={styles.timePicker}
+                          onValueChange={val=>{ console.log('startTime->',val); setStartTime(val); }}
+                        >
+                          {timeOptions.map(t=> <Picker.Item key={t} label={t} value={t} color='black'/> )}
+                        </Picker>
+                      </View>
+                    </View>
+                    <View style={styles.timeColumn}>
+                      <Text style={styles.timeLabel}>End Time</Text>
+                      <View style={styles.timePickerContainer}>
+                        <Picker
+                          selectedValue={endTime}
+                          style={styles.timePicker}
+                          onValueChange={val=>{ console.log('endTime->',val); setEndTime(val); }}
+                        >
+                          {timeOptions.map(t=> <Picker.Item key={t} label={t} value={t} color='black'/> )}
+                        </Picker>
+                      </View>
+                    </View>
+                  </View>
+                </>
+              )}
+
+              {step===3 && (
+                <>
+                  <Text style={[styles.header,styles.reviewHeader]}>Review Event</Text>
+                  <ScrollView contentContainerStyle={styles.reviewScrollContainer}>
+                    <Text style={styles.summaryText}>
+                      <Text style={{fontWeight:'bold'}}>Title:</Text> {title}
+                    </Text>
+                    <Text style={styles.summaryText}>
+                      <Text style={{fontWeight:'bold'}}>Details:</Text> {description||'None'}
+                    </Text>
+                    <Text style={styles.summaryText}>
+                      <Text style={{fontWeight:'bold'}}>Day:</Text> {selectedDay}
+                    </Text>
+                    <Text style={styles.summaryText}>
+                      <Text style={{fontWeight:'bold'}}>Time:</Text> {startTime} – {endTime}
+                    </Text>
+                  </ScrollView>
+                </>
+              )}
+
+              <View style={styles.buttonRow}>
+                <TouchableOpacity onPress={handleCancel} style={styles.cancelButton}>
+                  <Text style={styles.cancelText}>Cancel</Text>
+                </TouchableOpacity>
+                {step===3
+                  ? <TouchableOpacity onPress={handleSubmit} style={styles.nextButton}>
+                      <Text style={styles.nextText}>Confirm</Text>
                     </TouchableOpacity>
-                  ))}
-                </ScrollView>
-                <View style={styles.timeContainer}>
-                  <View style={styles.timeColumn}>
-                    <Text style={styles.timeLabel}>Start Time</Text>
-                    <View style={styles.timePickerContainer}>
-                      <Picker
-                        selectedValue={startTime}
-                        style={styles.timePicker}
-                        onValueChange={val=>{ console.log('startTime->',val); setStartTime(val); }}
-                      >
-                        {timeOptions.map(t=> <Picker.Item key={t} label={t} value={t} color='black'/> )}
-                      </Picker>
-                    </View>
-                  </View>
-                  <View style={styles.timeColumn}>
-                    <Text style={styles.timeLabel}>End Time</Text>
-                    <View style={styles.timePickerContainer}>
-                      <Picker
-                        selectedValue={endTime}
-                        style={styles.timePicker}
-                        onValueChange={val=>{ console.log('endTime->',val); setEndTime(val); }}
-                      >
-                        {timeOptions.map(t=> <Picker.Item key={t} label={t} value={t} color='black'/> )}
-                      </Picker>
-                    </View>
-                  </View>
-                </View>
-              </>
-            )}
+                  : <TouchableOpacity onPress={handleNext} style={styles.nextButton}>
+                      <Text style={styles.nextText}>Next</Text>
+                    </TouchableOpacity>
+                }
+              </View>
 
-            {step===3 && (
-              <>
-                <Text style={[styles.header,styles.reviewHeader]}>Review Event</Text>
-                <ScrollView contentContainerStyle={styles.reviewScrollContainer}>
-                  <Text style={styles.summaryText}>
-                    <Text style={{fontWeight:'bold'}}>Title:</Text> {title}
-                  </Text>
-                  <Text style={styles.summaryText}>
-                    <Text style={{fontWeight:'bold'}}>Details:</Text> {description||'None'}
-                  </Text>
-                  <Text style={styles.summaryText}>
-                    <Text style={{fontWeight:'bold'}}>Day:</Text> {selectedDay}
-                  </Text>
-                  <Text style={styles.summaryText}>
-                    <Text style={{fontWeight:'bold'}}>Time:</Text> {startTime} – {endTime}
-                  </Text>
-                </ScrollView>
-              </>
-            )}
-
-            <View style={styles.buttonRow}>
-              <TouchableOpacity onPress={handleCancel} style={styles.cancelButton}>
-                <Text style={styles.cancelText}>Cancel</Text>
-              </TouchableOpacity>
-              {step===3
-                ? <TouchableOpacity onPress={handleSubmit} style={styles.nextButton}>
-                    <Text style={styles.nextText}>Confirm</Text>
-                  </TouchableOpacity>
-                : <TouchableOpacity onPress={handleNext} style={styles.nextButton}>
-                    <Text style={styles.nextText}>Next</Text>
-                  </TouchableOpacity>
-              }
             </View>
-
           </View>
         </View>
-      </View>
+      </TouchableWithoutFeedback>
     </Modal>
   );
 }

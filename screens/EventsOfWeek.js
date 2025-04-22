@@ -222,7 +222,7 @@ const EventsOfWeek = ({ navigation, route }) => {
                         </View>
                         
                         <Text style={styles.eventDetails}>
-                          {(data.days && Array.isArray(data.days) ? data.days.join(', ') : data.day) || "No day assigned"} | {data.startTime} - {data.endTime}
+                          {data.day  || "No day assigned"} | {data.startTime} - {data.endTime}
                         </Text>
 
                         {data.description && (
