@@ -10,11 +10,8 @@ const WheelOfFortuneScreen = ({ route }) => {
 
   const numberOfSlices = Object.keys(slices).length;
   const anglePerSlice = 360 / numberOfSlices;
-  console.log('Received slices: ', slices);
 
   slices.forEach(({ sliceName, sliceData }) => {
-    console.log('Slice Name:', sliceName);
-    console.log('Slice Data:', sliceData);
   });
 
   const spinWheel = () => {
