@@ -83,7 +83,11 @@ const Event = ({ route, navigation }) => {
 
           <Text style={styles.cardTitle}>Days:</Text>
           <Text style={styles.cardContent}>
+<<<<<<< HEAD
             {eventData.day || 'No days assigned'}
+=======
+                {eventData.day || 'No day assigned'}
+>>>>>>> 8cc7d1040d58d218a16054a3d8abc8d8c3b2d31e
           </Text>
         </View>
       </ScrollView>
