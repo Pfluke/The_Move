@@ -114,6 +114,7 @@ const EventScreen = ({ navigation, route }) => {
             </TouchableOpacity>
           ))}
         </View>
+        
 
         <View style={styles.weekEventsContainer}>
           {/* Button to view top events of the week */}
@@ -130,6 +131,23 @@ const EventScreen = ({ navigation, route }) => {
           >
             <Text style={styles.customButtonText}>
               View All Events for this Week
+            </Text>
+          </TouchableOpacity>
+        </View>
+        <View style={styles.weekEventsContainer}>
+          {/* Button to view top events of the week */}
+          <TouchableOpacity 
+            style={styles.weekEventsButton}
+            onPress={() =>
+              navigation.navigate('EventCard', {
+                username,
+                groupName,
+                initialEventData: slices,
+              })
+            }
+          >
+            <Text style={styles.customButtonText}>
+              View Unseen Events
             </Text>
           </TouchableOpacity>
         </View>

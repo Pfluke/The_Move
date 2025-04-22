@@ -1,141 +1,193 @@
-import React, { useRef } from 'react';
-import { 
-  View, 
-  Text, 
-  StyleSheet, 
-  Image, 
-  Animated, 
-  PanResponder, 
+import React, { useEffect, useRef, useState } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  Image,
+  Animated,
+  PanResponder,
   Dimensions,
   ScrollView,
-  TouchableOpacity
+  TouchableOpacity,
+  ActivityIndicator,
+  Alert,
 } from 'react-native';
+import { getFirestore, collection, getDoc, doc, updateDoc } from 'firebase/firestore';
+import { app } from '../firebaseConfig';
+import { MaterialIcons } from '@expo/vector-icons';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
+const db = getFirestore(app);
 
-const EventCard = () => {
-  // Hardcoded event data
-  const eventData = {
-    name: "Friday Night Party",
-    description: "Weekly social gathering with music and drinks. This event is open to all members and friends. Come enjoy live music, great food, and amazing company! We'll have special guests this week including a live DJ and mixology demonstrations. Don't forget to bring your friends - the first 50 attendees get free drink tickets!\n\nLocation: The Rooftop Lounge\nDress Code: Smart Casual\nAge Limit: 21+",
-    startTime: "8:00 PM",
-    endTime: "11:30 PM",
-    days: ["Friday"],
-    location: "The Rooftop Lounge, 123 Main St",
-    imageUri: "https://images.unsplash.com/photo-1514525253161-7a46d19cd819"
-  };
+const EventCard = ({ navigation, route }) => {
+  const { username, groupName } = route.params;
+  const [events, setEvents] = useState([]);
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const [loading, setLoading] = useState(true);
 
-  // Animation values
   const pan = useRef(new Animated.ValueXY()).current;
   const scrollViewRef = useRef(null);
-  const isScrolling = useRef(false);
 
-  const panResponder = PanResponder.create({
-    onStartShouldSetPanResponder: (_, gestureState) => {
-      return gestureState.numberActiveTouches === 2;
-    },
-    onMoveShouldSetPanResponder: (_, gestureState) => {
-      return gestureState.numberActiveTouches === 2 && 
-             Math.abs(gestureState.dx) > Math.abs(gestureState.dy);
-    },
-    onPanResponderGrant: () => {
-      scrollViewRef.current?.setNativeProps({ scrollEnabled: false });
-      isScrolling.current = false;
-    },
-    onPanResponderMove: Animated.event(
-      [null, { dx: pan.x }],
-      { useNativeDriver: false }
-    ),
-    onPanResponderRelease: (_, gesture) => {
-      scrollViewRef.current?.setNativeProps({ scrollEnabled: true });
-      
-      if (gesture.dx > 120) {
-        swipeCard('right');
-      } else if (gesture.dx < -120) {
-        swipeCard('left');
-      } else {
-        resetPosition();
+  useEffect(() => {
+    const fetchEvents = async () => {
+      try {
+        const groupDocRef = doc(db, 'groups', groupName);
+        const groupDocSnap = await getDoc(groupDocRef);
+
+        if (groupDocSnap.exists()) {
+          const data = groupDocSnap.data();
+          const sliceData = data?.slices || {};
+
+          const arrayData = Object.entries(sliceData)
+            .map(([name, data]) => ({ name, ...data }))
+            .filter((event) => !(event.hasSeen || []).includes(username));
+
+          setEvents(arrayData);
+        } else {
+          Alert.alert('Error', 'Group not found.');
+        }
+      } catch (err) {
+        console.error('Error fetching events:', err);
+      } finally {
+        setLoading(false);
       }
-    },
-    onPanResponderTerminate: () => {
-      resetPosition();
-      scrollViewRef.current?.setNativeProps({ scrollEnabled: true });
-    }
-  });
+    };
 
-  const swipeCard = (direction) => {
+    fetchEvents();
+  }, []);
+
+  const markAsSeen = async (eventName) => {
+    try {
+      const groupDocRef = doc(db, 'groups', groupName);
+      const groupDocSnap = await getDoc(groupDocRef);
+
+      if (groupDocSnap.exists()) {
+        const slicePath = `slices.${eventName}.hasSeen`;
+        await updateDoc(groupDocRef, {
+          [slicePath]: [...(groupDocSnap.data()?.slices?.[eventName]?.hasSeen || []), username],
+        });
+      }
+    } catch (error) {
+      console.error('Error updating hasSeen:', error);
+    }
+  };
+
+  const swipeCard = async (direction) => {
+    const event = events[currentIndex];
+    if (!event) return;
+  
+    await markAsSeen(event.name);
+  
     Animated.spring(pan.x, {
       toValue: direction === 'right' ? SCREEN_WIDTH : -SCREEN_WIDTH,
-      useNativeDriver: false
+      useNativeDriver: false,
     }).start(() => {
-      resetPosition();
+      pan.setValue({ x: 0, y: 0 });
+  
+      // If this is the last card, move past the array length to trigger "no more events"
+      if (currentIndex >= events.length - 1) {
+        setCurrentIndex(events.length); // go just beyond the last index
+      } else {
+        setCurrentIndex((prev) => prev + 1);
+      }
     });
   };
+  
 
   const resetPosition = () => {
     Animated.spring(pan.x, {
       toValue: 0,
       friction: 4,
-      useNativeDriver: false
+      useNativeDriver: false,
     }).start();
   };
+
+  const panResponder = PanResponder.create({
+    onStartShouldSetPanResponder: (_, gestureState) => gestureState.numberActiveTouches === 2,
+    onMoveShouldSetPanResponder: (_, gestureState) =>
+      gestureState.numberActiveTouches === 2 && Math.abs(gestureState.dx) > Math.abs(gestureState.dy),
+    onPanResponderGrant: () => {
+      scrollViewRef.current?.setNativeProps({ scrollEnabled: false });
+    },
+    onPanResponderMove: Animated.event([null, { dx: pan.x }], { useNativeDriver: false }),
+    onPanResponderRelease: (_, gesture) => {
+      scrollViewRef.current?.setNativeProps({ scrollEnabled: true });
+      if (gesture.dx > 120) swipeCard('right');
+      else if (gesture.dx < -120) swipeCard('left');
+      else resetPosition();
+    },
+    onPanResponderTerminate: () => {
+      resetPosition();
+      scrollViewRef.current?.setNativeProps({ scrollEnabled: true });
+    },
+  });
+
+  if (loading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#333" />
+      </View>
+    );
+  }
+
+  const eventData = events[currentIndex];
+
+  if (!eventData) {
+    return (
+      <View style={styles.loadingContainer}>
+        <Text style={{ fontSize: 18 }}>No more events 🎉</Text>
+         <TouchableOpacity
+                style={styles.button}
+                onPress={() => navigation.navigate('EventScreen', { username, groupName })}
+              >
+                <Text style={styles.buttonText}>Back to Group</Text>
+              </TouchableOpacity>
+      </View>
+      
+    );
+  }
 
   return (
     <View style={styles.container}>
       <Animated.View
         {...panResponder.panHandlers}
-        style={[
-          styles.card,
-          {
-            transform: [
-              { translateX: pan.x }
-            ]
-          }
-        ]}
+        style={[styles.card, { transform: [{ translateX: pan.x }] }]}
       >
-        <Image 
-          source={{ uri: eventData.imageUri }} 
+        <Image
+          source={{
+            uri: 'https://c.ndtvimg.com/2019-01/ff5jdj8o_uri-instagram_625x300_11_January_19.jpg?downsize=773:435',
+          }}
           style={styles.cardImage}
           resizeMode="cover"
         />
 
         <View style={styles.cardInfo}>
           <Text style={styles.eventTitle}>{eventData.name}</Text>
-          
+
           <View style={styles.detailsContainer}>
-            <Text style={styles.detailText}>
-              🕒 {eventData.startTime} - {eventData.endTime}
-            </Text>
-            <Text style={styles.detailText}>
-              📅 {eventData.days.join(', ')}
-            </Text>
-            <Text style={styles.detailText}>
-              📍 {eventData.location}
-            </Text>
+            <Text style={styles.detailText}>🕒 {eventData.startTime} - {eventData.endTime}</Text>
+            <Text style={styles.detailText}>📅 {eventData.day || "NO DAY"}</Text>
+            <Text style={styles.detailText}>📍 {eventData.location || 'No location'}</Text>
           </View>
 
-          <ScrollView 
+          <ScrollView
             ref={scrollViewRef}
             style={styles.descriptionScroll}
             contentContainerStyle={styles.scrollContent}
-            scrollEnabled={true}
           >
-            <Text style={styles.cardDescription}>
-              {eventData.description}
-            </Text>
+            <Text style={styles.cardDescription}>{eventData.description}</Text>
           </ScrollView>
         </View>
       </Animated.View>
 
-      {/* Accept/Decline Buttons */}
       <View style={styles.buttonContainer}>
-        <TouchableOpacity 
+        <TouchableOpacity
           style={[styles.button, styles.declineButton]}
           onPress={() => swipeCard('left')}
         >
           <Text style={[styles.buttonText, styles.declineButtonText]}>Decline</Text>
         </TouchableOpacity>
-        <TouchableOpacity 
+        <TouchableOpacity
           style={[styles.button, styles.acceptButton]}
           onPress={() => swipeCard('right')}
         >
@@ -152,11 +204,11 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 20
+    padding: 20,
   },
   card: {
     width: '100%',
-    height: SCREEN_HEIGHT * 0.78, 
+    height: SCREEN_HEIGHT * 0.78,
     borderRadius: 20,
     backgroundColor: '#F5F5F5',
     borderWidth: 2,
@@ -240,6 +292,11 @@ const styles = StyleSheet.create({
   },
   declineButtonText: {
     color: '#FFF',
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
 });
 

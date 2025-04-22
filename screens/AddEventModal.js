@@ -68,6 +68,7 @@ const AddEventModal = ({ visible, onClose, onSubmit }) => {
         day: selectedDay,
         startTime,
         endTime,
+        hasSeen:[]
       };
       resetModal();
       onSubmit(eventData);
