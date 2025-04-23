@@ -101,45 +101,63 @@ const EventScreen = ({ navigation, route }) => {
             </View>
           </View>
 
-          {/* Day Buttons */}
-          <View style={styles.dayButtonsContainer}>
-            {sortedDaysOfWeek.map((day, index) => (
-              <TouchableOpacity
-                key={index}
-                onPress={() => navigation.navigate('EventsOfWeek', { selectedDay: day, username, groupName, initialEventData: slices, })}
-                style={[
-                  styles.dayButton,
-                  // Highlight today's button
-                  index === 0 ? styles.todayButton : null
-                ]}
-              >
-                <Text style={styles.dayButtonText}>
-                  {day}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-
-          <View style={styles.weekEventsContainer}>
-            {/* Button to view top events of the week */}
-            <TouchableOpacity 
-              style={styles.weekEventsButton}
-              onPress={() =>
-                navigation.navigate('EventsOfWeek', {
-                  selectedDay: "WEEK",
-                  username,
-                  groupName,
-                  initialEventData: slices,
-                })
-              }
+        {/* Day Buttons */}
+        <View style={styles.dayButtonsContainer}>
+          {sortedDaysOfWeek.map((day, index) => (
+            <TouchableOpacity
+              key={index}
+              onPress={() => navigation.navigate('EventsOfWeek', { selectedDay: day, username, groupName, initialEventData: slices, })}
+              style={[
+                styles.dayButton,
+                // Highlight today's button
+                index === 0 ? styles.todayButton : null
+              ]}
             >
-              <Text style={styles.customButtonText}>
-                View All Events for this Week
+              <Text style={styles.dayButtonText}>
+                {day}
               </Text>
             </TouchableOpacity>
-          </View>
-          
-          <View style={styles.bottomButtonContainer}>
+          ))}
+        </View>
+        
+
+        <View style={styles.weekEventsContainer}>
+          {/* Button to view top events of the week */}
+          <TouchableOpacity 
+            style={styles.weekEventsButton}
+            onPress={() =>
+              navigation.navigate('EventsOfWeek', {
+                selectedDay: "WEEK",
+                username,
+                groupName,
+                initialEventData: slices,
+              })
+            }
+          >
+            <Text style={styles.customButtonText}>
+              View All Events for this Week
+            </Text>
+          </TouchableOpacity>
+        </View>
+        <View style={styles.weekEventsContainer}>
+          {/* Button to view top events of the week */}
+          <TouchableOpacity 
+            style={styles.weekEventsButton}
+            onPress={() =>
+              navigation.navigate('EventCard', {
+                username,
+                groupName,
+                initialEventData: slices,
+              })
+            }
+          >
+            <Text style={styles.customButtonText}>
+              View Unseen Events
+            </Text>
+          </TouchableOpacity>
+        </View>
+        
+        <View style={styles.bottomButtonContainer}>
 
             {/* Go to Group Screen Button */}
             <View style={styles.buttonContainer}>

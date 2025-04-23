@@ -1,11 +1,11 @@
-import React, { useRef } from 'react';
-import { 
-  View, 
-  Text, 
-  StyleSheet, 
-  Image, 
-  Animated, 
-  PanResponder, 
+import React, { useEffect, useRef, useState } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  Image,
+  Animated,
+  PanResponder,
   Dimensions,
   ScrollView,
   TouchableOpacity,
@@ -13,6 +13,9 @@ import {
   StatusBar
 } from 'react-native';
 import { useRoute, useNavigation } from '@react-navigation/native';
+import { MaterialIcons } from '@expo/vector-icons';
+import { getFirestore, collection, getDoc, doc, updateDoc } from 'firebase/firestore';
+import { app } from '../firebaseConfig';
 import { MaterialIcons } from '@expo/vector-icons';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
@@ -46,16 +49,29 @@ const EventCard = () => {
       resetPosition();
       scrollViewRef.current?.setNativeProps({ scrollEnabled: true });
     }
-  });
+  };
 
-  const swipeCard = (direction) => {
+  const swipeCard = async (direction) => {
+    const event = events[currentIndex];
+    if (!event) return;
+  
+    await markAsSeen(event.name);
+  
     Animated.spring(pan.x, {
       toValue: direction === 'right' ? SCREEN_WIDTH : -SCREEN_WIDTH,
-      useNativeDriver: false
+      useNativeDriver: false,
     }).start(() => {
-      resetPosition();
+      pan.setValue({ x: 0, y: 0 });
+  
+      // If this is the last card, move past the array length to trigger "no more events"
+      if (currentIndex >= events.length - 1) {
+        setCurrentIndex(events.length); // go just beyond the last index
+      } else {
+        setCurrentIndex((prev) => prev + 1);
+      }
     });
   };
+  
 
   const resetPosition = () => {
     Animated.spring(pan.x, {
@@ -64,6 +80,51 @@ const EventCard = () => {
       useNativeDriver: false
     }).start();
   };
+
+  const panResponder = PanResponder.create({
+    onStartShouldSetPanResponder: (_, gestureState) => gestureState.numberActiveTouches === 2,
+    onMoveShouldSetPanResponder: (_, gestureState) =>
+      gestureState.numberActiveTouches === 2 && Math.abs(gestureState.dx) > Math.abs(gestureState.dy),
+    onPanResponderGrant: () => {
+      scrollViewRef.current?.setNativeProps({ scrollEnabled: false });
+    },
+    onPanResponderMove: Animated.event([null, { dx: pan.x }], { useNativeDriver: false }),
+    onPanResponderRelease: (_, gesture) => {
+      scrollViewRef.current?.setNativeProps({ scrollEnabled: true });
+      if (gesture.dx > 120) swipeCard('right');
+      else if (gesture.dx < -120) swipeCard('left');
+      else resetPosition();
+    },
+    onPanResponderTerminate: () => {
+      resetPosition();
+      scrollViewRef.current?.setNativeProps({ scrollEnabled: true });
+    },
+  });
+
+  if (loading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#333" />
+      </View>
+    );
+  }
+
+  const eventData = events[currentIndex];
+
+  if (!eventData) {
+    return (
+      <View style={styles.loadingContainer}>
+        <Text style={{ fontSize: 18 }}>No more events 🎉</Text>
+         <TouchableOpacity
+                style={styles.button}
+                onPress={() => navigation.navigate('EventScreen', { username, groupName })}
+              >
+                <Text style={styles.buttonText}>Back to Group</Text>
+              </TouchableOpacity>
+      </View>
+      
+    );
+  }
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -90,7 +151,7 @@ const EventCard = () => {
 
         <View style={styles.cardInfo}>
           <Text style={styles.eventTitle}>{eventData.name}</Text>
-          
+
           <View style={styles.detailsContainer}>
             <Text style={styles.detailText}>
               🕒 {eventData.startTime} - {eventData.endTime}

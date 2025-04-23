@@ -62,7 +62,7 @@ const WheelOfFortuneScreen = ({ route }) => {
                   styles.slice,
                   {
                     transform: [{ rotate: `${sliceAngle}deg` }],
-                    backgroundColor: slices[slice].color || '#FFD700', // Default color
+                    backgroundColor: slices[ slice].color || '#FFD700', // Default color
                   },
                 ]}
               >
