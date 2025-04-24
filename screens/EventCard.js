@@ -3,7 +3,6 @@ import {
   View,
   Text,
   StyleSheet,
-  Image,
   Animated,
   PanResponder,
   Dimensions,
@@ -72,11 +71,34 @@ const EventCard = ({ navigation, route }) => {
     }
   };
 
+  const handleVote = async (eventName, voteValue) => {
+    try {
+      const groupDocRef = doc(db, 'groups', groupName);
+      const groupDocSnap = await getDoc(groupDocRef);
+
+      if (groupDocSnap.exists()) {
+        const eventItem = groupDocSnap.data()?.slices?.[eventName] || {};
+        const currentVote = eventItem.voters?.[username] || 0;
+        const newVote = voteValue; // 1 for accept, -1 for decline
+        const voteDiff = newVote - currentVote;
+
+        await updateDoc(groupDocRef, {
+          [`slices.${eventName}.votes`]: (eventItem.votes || 0) + voteDiff,
+          [`slices.${eventName}.voters.${username}`]: newVote
+        });
+      }
+    } catch (error) {
+      console.error('Error updating vote:', error);
+    }
+  };
+
   const swipeCard = async (direction) => {
     const event = events[currentIndex];
     if (!event) return;
   
+    // Mark as seen and record vote
     await markAsSeen(event.name);
+    await handleVote(event.name, direction === 'right' ? 1 : -1);
   
     Animated.spring(pan.x, {
       toValue: direction === 'right' ? SCREEN_WIDTH : -SCREEN_WIDTH,
@@ -92,7 +114,6 @@ const EventCard = ({ navigation, route }) => {
       }
     });
   };
-  
 
   const resetPosition = () => {
     Animated.spring(pan.x, {
@@ -136,14 +157,13 @@ const EventCard = ({ navigation, route }) => {
     return (
       <View style={styles.loadingContainer}>
         <Text style={{ fontSize: 18 }}>No more events 🎉</Text>
-         <TouchableOpacity
-                style={styles.button}
-                onPress={() => navigation.navigate('EventScreen', { username, groupName })}
-              >
-                <Text style={styles.buttonText}>Back to Group</Text>
-              </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.button}
+          onPress={() => navigation.navigate('EventScreen', { username, groupName })}
+        >
+          <Text style={styles.buttonText}>Back to Group</Text>
+        </TouchableOpacity>
       </View>
-      
     );
   }
 
@@ -153,21 +173,13 @@ const EventCard = ({ navigation, route }) => {
         {...panResponder.panHandlers}
         style={[styles.card, { transform: [{ translateX: pan.x }] }]}
       >
-        <Image
-          source={{
-            uri: 'https://c.ndtvimg.com/2019-01/ff5jdj8o_uri-instagram_625x300_11_January_19.jpg?downsize=773:435',
-          }}
-          style={styles.cardImage}
-          resizeMode="cover"
-        />
-
         <View style={styles.cardInfo}>
           <Text style={styles.eventTitle}>{eventData.name}</Text>
 
           <View style={styles.detailsContainer}>
             <Text style={styles.detailText}>🕒 {eventData.startTime} - {eventData.endTime}</Text>
             <Text style={styles.detailText}>📅 {eventData.day || "NO DAY"}</Text>
-            <Text style={styles.detailText}>📍 {eventData.location || 'No location'}</Text>
+            {/* <Text style={styles.detailText}>📍 {eventData.location || 'No location'}</Text> */}
           </View>
 
           <ScrollView
@@ -220,16 +232,10 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3,
     shadowRadius: 20,
   },
-  cardImage: {
-    width: '100%',
-    height: '40%',
-  },
   cardInfo: {
     padding: 20,
     backgroundColor: '#FFF',
-    height: '60%',
-    borderTopWidth: 2,
-    borderTopColor: '#000',
+    height: '100%',
   },
   eventTitle: {
     fontSize: 26,

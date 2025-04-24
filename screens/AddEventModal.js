@@ -341,9 +341,9 @@ const styles = StyleSheet.create({
   timePicker:{ height:140,},
   summaryText:{ fontSize:18,marginVertical:5},
   buttonRow:{ flexDirection:'row',justifyContent:'space-evenly',marginTop:20},
-  cancelButton:{ padding:10,backgroundColor:'#ffdddd',borderRadius:3,borderWidth:2,width:'40%',alignItems:'center'},
+  cancelButton:{ padding:10,backgroundColor:'#ffdddd',borderRadius:3,borderWidth:2,width:'40%',alignItems:'center', paddingHorizontal: 10, marginRight: 10},
   cancelText:{ fontWeight:'bold',fontSize:20},
-  nextButton:{ padding:10,backgroundColor:'#d4f7d4',borderRadius:3,borderWidth:2,width:'40%',alignItems:'center'},
+  nextButton:{ padding:10,backgroundColor:'#d4f7d4',borderRadius:3,borderWidth:2,width:'40%',alignItems:'center', paddingHorizontal: 10, marginLeft: 10},
   nextText:{ fontWeight:'bold',fontSize:20},
   reviewScrollContainer:{ paddingBottom:30},
 });
