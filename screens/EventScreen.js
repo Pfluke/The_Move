@@ -84,7 +84,7 @@ const EventScreen = ({ navigation, route }) => {
   return (
     <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
       <SafeAreaView style={{ flex: 1, backgroundColor:"white" }}>
-        <StatusBar barStyle="dark-content" />
+        <StatusBar barStyle="black-content" />
         {/* black safe background for ios white text at top */}
           <KeyboardAvoidingView
             behavior={Platform.OS === 'ios' ? 'padding' : 'height'}

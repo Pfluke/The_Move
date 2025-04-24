@@ -1,7 +1,7 @@
 import React, { useState, useRef } from 'react';
 import {
   View, TextInput, Text, StyleSheet, TouchableOpacity,
-  Alert, Keyboard, KeyboardAvoidingView, Platform, TouchableWithoutFeedback
+  Alert, Keyboard, KeyboardAvoidingView, Platform, TouchableWithoutFeedback, SafeAreaView, StatusBar
 } from 'react-native';
 import {
   getFirestore, doc, getDoc, setDoc,
@@ -91,10 +91,12 @@ const LoginScreen = ({ navigation }) => {
 
   return (
     <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={styles.container}
-      >
+      <SafeAreaView style={{ flex: 1, backgroundColor:"black" }}>
+        <StatusBar barStyle="black-content" />
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          style={styles.container}
+        >
           <View style={styles.titleContainer}>
             <View style={styles.titleTransformContainer}>
               <Text style={styles.title}>THE MOVE</Text>
@@ -141,7 +143,8 @@ const LoginScreen = ({ navigation }) => {
             </TouchableOpacity>
             {loginMessage ? <Text style={styles.successText}>{loginMessage}</Text> : null}
           </View>
-      </KeyboardAvoidingView>
+        </KeyboardAvoidingView>
+      </SafeAreaView>
     </TouchableWithoutFeedback>
   );
 };
@@ -197,6 +200,7 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-end',
     marginRight: 10,
     marginTop: 2,
+    width: 14,
   },
   textBubbleSmall: {
     backgroundColor: '#007AFF',
@@ -205,6 +209,7 @@ const styles = StyleSheet.create({
     marginBottom: 10,
     alignSelf: 'flex-end',
     marginTop: 2,
+    width: 8,
   },
   titleUnderline: {
     height: 5,
