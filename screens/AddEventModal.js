@@ -20,8 +20,9 @@ import { app } from '../firebaseConfig';
 const db = getFirestore(app);
 const DAYS = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
 
-const timeOptions = Array.from({ length: 48 }, (_, i) => {
-  const total = i * 30;
+// build 30‑min AM/PM options
+const timeOptions = Array.from({ length: 96 }, (_, i) => {
+  const total = i * 15;
   const h24 = Math.floor(total / 60);
   const m = total % 60;
   const ampm = h24 >= 12 ? 'PM' : 'AM';
