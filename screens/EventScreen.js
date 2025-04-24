@@ -217,8 +217,8 @@ const styles = StyleSheet.create({
   },
   headerContainer: { // header container styling
     backgroundColor: '#FFFFFF',
-    paddingTop: 15,
     paddingBottom: 15,
+    marginTop: 6,
   },
   groupNameContainer: { // group name container
     alignItems: 'center',
@@ -243,7 +243,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     justifyContent: 'center',
     alignSelf: 'center',
-    width: 170,
+    width: 160,
   },
   weekEventsButton: {
     backgroundColor: 'transparent',
@@ -255,7 +255,6 @@ const styles = StyleSheet.create({
   },
   dayButtonsContainer: {
     flexDirection: 'column',
-    marginVertical: 6,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -276,13 +275,14 @@ const styles = StyleSheet.create({
   },
   topButtonContainer: {
     flexDirection: "row",
-    padding: 10,
+    paddingHorizontal: 10,
     backgroundColor: '#FFFFFF',
   },
   bottomButtonContainer: {
     flexDirection: "row",
     justifyContent: 'space-around',
-    padding: 10,
+    paddingHorizontal: 10,
+    marginTop: 8,
     backgroundColor: '#FFFFFF',
   },
   buttonContainer: {
