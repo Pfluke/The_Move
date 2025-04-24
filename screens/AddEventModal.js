@@ -233,7 +233,7 @@ export default function AddEventModal({ visible, onClose, onSubmit }) {
                           style={styles.timePicker}
                           onValueChange={setStartTime}
                         >
-                          {timeOptions.map(t=> <Picker.Item key={t} label={t} value={t}/> )}
+                          {timeOptions.map(t=> <Picker.Item key={t} label={t} value={t} color="black"/>)}
                         </Picker>
                       </View>
                     </View>
@@ -245,7 +245,7 @@ export default function AddEventModal({ visible, onClose, onSubmit }) {
                           style={styles.timePicker}
                           onValueChange={setEndTime}
                         >
-                          {timeOptions.map(t=> <Picker.Item key={t} label={t} value={t}/> )}
+                          {timeOptions.map(t=> <Picker.Item key={t} label={t} value={t} color="black"/> )}
                         </Picker>
                       </View>
                     </View>
@@ -299,10 +299,10 @@ const styles = StyleSheet.create({
   timePickerContainer:{ borderRadius:5,borderWidth:1,borderColor:'black',overflow:'hidden' },
   timePicker:{ height:140 },
   summaryText:{ fontSize:18,marginVertical:5 },
-  buttonRow:{ flexDirection:'row',justifyContent:'space-evenly',marginTop:20 },
-  cancelButton:{ padding:10,backgroundColor:'#ffdddd',borderRadius:3,borderWidth:2,width:'40%',alignItems:'center' },
+  buttonRow:{ flexDirection:'row',justifyContent:'space-evenly',marginTop:20, },
+  cancelButton:{ padding:10,backgroundColor:'#ffdddd',borderRadius:3,borderWidth:2,width:'40%',alignItems:'center', marginHorizontal: 10 },
   cancelText:{ fontWeight:'bold',fontSize:20 },
-  nextButton:{ padding:10,backgroundColor:'#d4f7d4',borderRadius:3,borderWidth:2,width:'40%',alignItems:'center' },
+  nextButton:{ padding:10,backgroundColor:'#d4f7d4',borderRadius:3,borderWidth:2,width:'40%',alignItems:'center', marginHorizontal: 10 },
   nextText:{ fontWeight:'bold',fontSize:20 },
   reviewScrollContainer:{ paddingBottom:30 },
 });
