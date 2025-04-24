@@ -197,13 +197,13 @@ const EventCard = ({ navigation, route }) => {
           style={[styles.button, styles.declineButton]}
           onPress={() => swipeCard('left')}
         >
-          <Text style={[styles.buttonText, styles.declineButtonText]}>Decline</Text>
+          <Text style={[styles.buttonText, styles.declineButtonText]}>Dislike</Text>
         </TouchableOpacity>
         <TouchableOpacity
           style={[styles.button, styles.acceptButton]}
           onPress={() => swipeCard('right')}
         >
-          <Text style={[styles.buttonText, styles.acceptButtonText]}>Accept</Text>
+          <Text style={[styles.buttonText, styles.acceptButtonText]}>Like</Text>
         </TouchableOpacity>
       </View>
     </View>
