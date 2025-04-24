@@ -29,14 +29,18 @@ const Event = ({ route, navigation }) => {
           const sliceData = data?.slices?.[sliceName];
 
           if (sliceData) {
-            const safeSliceData = {
+            // Handle both 'day' (string) and 'days' (array) formats
+            const days = Array.isArray(sliceData.days) ? sliceData.days : 
+                        (sliceData.day ? [sliceData.day] : ["No days assigned"]);
+            
+            setEventData({
               description: sliceData.description || "No description available.",
               startTime: sliceData.startTime || "N/A",
               endTime: sliceData.endTime || "N/A",
-              days: Array.isArray(sliceData.days) ? sliceData.days : 
-                   (sliceData.day ? [sliceData.day] : ["No days assigned"]),
-            };
-            setEventData(safeSliceData);
+              days: days,
+              // location: sliceData.location || "No location specified",
+              votes: sliceData.votes || 0,
+            });
           } else {
             Alert.alert("Error", "Event not found.");
             setEventData({
@@ -44,12 +48,15 @@ const Event = ({ route, navigation }) => {
               startTime: "N/A",
               endTime: "N/A",
               days: ["No days assigned"],
+              location: "No location specified",
+              votes: 0,
             });
           }
         } else {
           Alert.alert("Error", "Group not found.");
         }
       } catch (error) {
+        console.error("Error fetching event data:", error);
         Alert.alert("Error", "Failed to fetch event data.");
       } finally {
         setLoading(false);
@@ -100,10 +107,16 @@ const Event = ({ route, navigation }) => {
             {eventData.startTime} - {eventData.endTime}
           </Text>
 
-          <Text style={styles.sectionTitle}>Days</Text>
+          <Text style={styles.sectionTitle}>Day</Text>
           <Text style={styles.cardContent}>
-                {eventData.day || 'No day assigned'}
+            {eventData.days.join(', ')}
           </Text>
+
+          {/* <Text style={styles.sectionTitle}>Location</Text> */}
+          {/* <Text style={styles.cardContent}>{eventData.location}</Text> */}
+
+          <Text style={styles.sectionTitle}>Votes</Text>
+          <Text style={styles.cardContent}>{eventData.votes}</Text>
         </View>
 
         <TouchableOpacity
@@ -149,8 +162,20 @@ const styles = StyleSheet.create({
     shadowRadius: 10,
     elevation: 5,
   },
-  sectionTitle: { fontSize: 18, fontWeight: 'bold', color: '#000', marginBottom: 8 },
-  cardContent: { fontSize: 12, color: '#555', marginBottom: 20, textAlign: 'left' },
+  sectionTitle: { 
+    fontSize: 18, 
+    fontWeight: 'bold', 
+    color: '#000', 
+    marginBottom: 8,
+    marginTop: 12 
+  },
+  cardContent: { 
+    fontSize: 16, 
+    color: '#555', 
+    marginBottom: 20, 
+    textAlign: 'left',
+    lineHeight: 24 
+  },
   button: {
     backgroundColor: '#000',
     paddingVertical: 14,
