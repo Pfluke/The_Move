@@ -207,7 +207,7 @@ export default function InputSchedule({ route, navigation }) {
                   <DateTimePicker
                     value={selectedTime}
                     mode="time"
-                    display="default"
+                    display="spinner"
                     onChange={handleTimeChange}
                     minuteInterval={5}
                   />
