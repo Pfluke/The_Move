@@ -20,7 +20,6 @@ import { app } from '../firebaseConfig';
 const db = getFirestore(app);
 const DAYS = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
 
-// build 30‑min AM/PM options
 const timeOptions = Array.from({ length: 48 }, (_, i) => {
   const total = i * 30;
   const h24 = Math.floor(total / 60);
@@ -31,7 +30,6 @@ const timeOptions = Array.from({ length: 48 }, (_, i) => {
   return `${h12}:${mm} ${ampm}`;
 });
 
-// parse "H:MM AM/PM" → minutes since midnight
 function parse12Hour(str) {
   const [time, ampm] = str.trim().split(' ');
   let [h, m] = time.split(':').map(Number);
@@ -40,7 +38,6 @@ function parse12Hour(str) {
   return h * 60 + m;
 }
 
-// format a Date → "H:MM AM/PM"
 function formatTime(date) {
   let h = date.getHours();
   let m = date.getMinutes();
@@ -51,9 +48,7 @@ function formatTime(date) {
 }
 
 export default function AddEventModal({ visible, onClose, onSubmit }) {
-  const route = useRoute();
-  const { groupName, username } = route.params;
-  //console.log('🔑 AddEventModal mount; groupName =', groupName, 'username =', username);
+  const { groupName, username } = useRoute().params;
 
   const [groupMembers, setGroupMembers] = useState([]);
   const [step, setStep] = useState(1);
@@ -64,113 +59,102 @@ export default function AddEventModal({ visible, onClose, onSubmit }) {
   const [endTime, setEndTime] = useState('5:00 PM');
   const [descriptionWarning, setDescriptionWarning] = useState(false);
 
-  // subscribe to group.members
   useEffect(() => {
-    if (!groupName) {
-      //console.warn('⚠️ No groupName passed');
-      return;
-    }
-    //console.log('subscribing to groups/', groupName);
+    if (!groupName) return;
     const unsub = onSnapshot(
       doc(db, 'groups', groupName),
       snap => {
-        if (snap.exists()) {
-          const mem = snap.data().members || [];
-          //console.log('loaded group.members:', mem);
-          setGroupMembers(mem);
-        } else {
-          //console.warn('group doc missing for', groupName);
-        }
-      },
-      //err => console.error('groups onSnapshot error:', err)
+        const mem = snap.exists() ? snap.data().members || [] : [];
+        setGroupMembers(mem);
+      }
     );
     return () => unsub();
   }, [groupName]);
 
-  // count how many members overlap
+  // Fetch all user docs in parallel, then detect overlaps
   async function countBusyMembersForTime(day, start, end) {
-    //console.log('🔍 countBusyMembersForTime()', { day, start, end });
-    //console.log('👥 groupMembers:', groupMembers);
     const eventStart = parse12Hour(start);
     const eventEnd = parse12Hour(end);
-    let busyCount = 0;
 
-    for (let user of groupMembers) {
-      //console.log(`  fetching busyTimes for user=${user}`);
-      const snap = await getDoc(doc(db, 'users', user.toLowerCase()));
-      if (!snap.exists()) {
-        //console.log('   → no user doc for', user);
-        continue;
-      }
-      // Normalize old-object & string formats
+    // fetch all docs concurrently
+    const promises = groupMembers.map(user =>
+      getDoc(doc(db, 'users', user.toLowerCase()))
+        .then(snap => ({ user, snap }))
+    );
+    const results = await Promise.all(promises);
+
+    let busyCount = 0;
+    const conflicts = [];
+
+    for (const { user, snap } of results) {
+      if (!snap.exists()) continue;
       const raw = snap.data().busyTimes?.[day] || [];
       const busyArr = raw
-        .map(item => {
-          if (typeof item === 'string') {
-            return item;
-          } else if (item.start && item.end) {
-            return `${formatTime(item.start.toDate())} – ${formatTime(item.end.toDate())}`;
-          }
-          return null;
-        })
+        .map(item => (
+          typeof item === 'string'
+            ? item
+            : (item.start && item.end)
+              ? `${formatTime(item.start.toDate())} – ${formatTime(item.end.toDate())}`
+              : null
+        ))
         .filter(Boolean);
-      //console.log(`   → normalized busyArr[${day}] for ${user}:`, busyArr);
 
-      const overlaps = busyArr.some(rangeStr => {
+      const conflictRange = busyArr.find(rangeStr => {
         const [sStr, eStr] = rangeStr.split('–').map(s => s.trim());
         const sMin = parse12Hour(sStr);
         const eMin = parse12Hour(eStr);
-        const isOverlap = eventStart < eMin && eventEnd > sMin;
-        if (isOverlap) //console.log(`     overlap with ${user}: ${rangeStr}`);
-        return isOverlap;
+        return eventStart < eMin && eventEnd > sMin;
       });
-      if (overlaps) busyCount++;
+
+      if (conflictRange) {
+        busyCount++;
+        conflicts.push(`${user}: ${conflictRange}`);
+      }
     }
 
-    //console.log('total busyCount =', busyCount);
-    return busyCount;
+    return { busyCount, conflicts };
   }
 
-  // wizard navigation
   const handleNext = async () => {
-    //console.log('▶️ handleNext() step=', step);
     if (step === 1) {
       if (!title.trim()) {
-        return Alert.alert('Title Required','Please enter a title.');
+        Alert.alert('Title Required','Please enter a title.');
+        return;
       }
       if (!description.trim() && !descriptionWarning) {
-        Alert.alert('Missing Details','Your buddies may appreciate more info.');
         setDescriptionWarning(true);
+        Alert.alert('Missing Details','Your buddies may appreciate more info.');
         return;
       }
       setStep(2);
 
-    } else if (step === 2) {
-      //console.log('  inputs:', selectedDay, startTime, endTime);
+    } else {
       if (!selectedDay) {
-        return Alert.alert('Missing Info','Please select a day.');
+        Alert.alert('Missing Info','Please select a day.');
+        return;
       }
       if (parse12Hour(endTime) <= parse12Hour(startTime)) {
-        return Alert.alert('Invalid Time','End must be after start.');
+        Alert.alert('Invalid Time','End must be after start.');
+        return;
       }
-      const numBusy = await countBusyMembersForTime(selectedDay, startTime, endTime);
-      //console.log('  numBusy =', numBusy);
-      if (numBusy > 0) {
-        return Alert.alert(
+
+      const { busyCount, conflicts } = await countBusyMembersForTime(selectedDay, startTime, endTime);
+      if (busyCount > 0) {
+        Alert.alert(
           'Busy Members',
-          `${numBusy} ${numBusy===1?'person is':'people are'} busy during this slot.`,
+          `${busyCount} ${busyCount === 1 ? 'person is' : 'people are'} busy during this time slot:\n\n${conflicts.join('\n')}`,
           [
-            { text:'Reschedule', style:'cancel', onPress:()=>console.log('🔄 Reschedule') },
-            { text:'Continue', onPress:()=>{ console.log('➡️ Continue'); setStep(3); } }
+            { text:'Reschedule', style:'cancel' },
+            { text:'Continue', onPress:() => setStep(3) }
           ]
         );
+        return;
       }
       setStep(3);
     }
   };
 
   const resetModal = () => {
-    //console.log('resetModal()');
     setStep(1);
     setTitle('');
     setDescription('');
@@ -181,17 +165,13 @@ export default function AddEventModal({ visible, onClose, onSubmit }) {
   };
 
   const handleCancel = () => {
-    //console.log('handleCancel()');
     resetModal();
     onClose();
   };
 
   const handleSubmit = () => {
-    //console.log('✅ handleSubmit()');
-    const eventData = { title: title.trim(), description: description.trim(), day: selectedDay, startTime, endTime };
-    //console.log(' → submitting', eventData);
+    onSubmit({ title: title.trim(), description: description.trim(), day: selectedDay, startTime, endTime });
     resetModal();
-    onSubmit(eventData);
   };
 
   return (
@@ -204,7 +184,6 @@ export default function AddEventModal({ visible, onClose, onSubmit }) {
             styles.reviewModalContent
           ]}>
             <View style={styles.innerModal}>
-
               {step===1 && (
                 <>
                   <Text style={styles.header}>Event Title</Text>
@@ -215,7 +194,6 @@ export default function AddEventModal({ visible, onClose, onSubmit }) {
                     value={title}
                     onChangeText={setTitle}
                     style={styles.input}
-                    onSubmitEditing={Keyboard.dismiss}
                   />
                   <Text style={styles.details}>Optional: Event Details</Text>
                   <TextInput
@@ -225,14 +203,10 @@ export default function AddEventModal({ visible, onClose, onSubmit }) {
                     value={description}
                     onChangeText={setDescription}
                     style={[styles.input,{height:100}]}
-                    onSubmitEditing={Keyboard.dismiss}
                     multiline
-                    scrollEnables
-                    textAlignVertical="top"
                   />
                 </>
               )}
-
               {step===2 && (
                 <>
                   <Text style={styles.header}>Choose Day & Time</Text>
@@ -241,9 +215,9 @@ export default function AddEventModal({ visible, onClose, onSubmit }) {
                       <TouchableOpacity
                         key={day}
                         style={[styles.dayOption, selectedDay===day && styles.selectedDay]}
-                        onPress={()=>{ console.log('pick day',day); setSelectedDay(day); }}
+                        onPress={()=>setSelectedDay(day)}
                       >
-                        <Text style={ selectedDay===day ? styles.selectedDayText : styles.dayOptionText }>
+                        <Text style={selectedDay===day?styles.selectedDayText:styles.dayOptionText}>
                           {day}
                         </Text>
                       </TouchableOpacity>
@@ -256,9 +230,9 @@ export default function AddEventModal({ visible, onClose, onSubmit }) {
                         <Picker
                           selectedValue={startTime}
                           style={styles.timePicker}
-                          onValueChange={val=>{ console.log('startTime->',val); setStartTime(val); }}
+                          onValueChange={setStartTime}
                         >
-                          {timeOptions.map(t=> <Picker.Item key={t} label={t} value={t} color='black'/> )}
+                          {timeOptions.map(t=> <Picker.Item key={t} label={t} value={t}/> )}
                         </Picker>
                       </View>
                     </View>
@@ -268,50 +242,34 @@ export default function AddEventModal({ visible, onClose, onSubmit }) {
                         <Picker
                           selectedValue={endTime}
                           style={styles.timePicker}
-                          onValueChange={val=>{ console.log('endTime->',val); setEndTime(val); }}
+                          onValueChange={setEndTime}
                         >
-                          {timeOptions.map(t=> <Picker.Item key={t} label={t} value={t} color='black'/> )}
+                          {timeOptions.map(t=> <Picker.Item key={t} label={t} value={t}/> )}
                         </Picker>
                       </View>
                     </View>
                   </View>
                 </>
               )}
-
               {step===3 && (
                 <>
                   <Text style={[styles.header,styles.reviewHeader]}>Review Event</Text>
                   <ScrollView contentContainerStyle={styles.reviewScrollContainer}>
-                    <Text style={styles.summaryText}>
-                      <Text style={{fontWeight:'bold'}}>Title:</Text> {title}
-                    </Text>
-                    <Text style={styles.summaryText}>
-                      <Text style={{fontWeight:'bold'}}>Details:</Text> {description||'None'}
-                    </Text>
-                    <Text style={styles.summaryText}>
-                      <Text style={{fontWeight:'bold'}}>Day:</Text> {selectedDay}
-                    </Text>
-                    <Text style={styles.summaryText}>
-                      <Text style={{fontWeight:'bold'}}>Time:</Text> {startTime} – {endTime}
-                    </Text>
+                    <Text style={styles.summaryText}><Text style={{fontWeight:'bold'}}>Title:</Text> {title}</Text>
+                    <Text style={styles.summaryText}><Text style={{fontWeight:'bold'}}>Details:</Text> {description||'None'}</Text>
+                    <Text style={styles.summaryText}><Text style={{fontWeight:'bold'}}>Day:</Text> {selectedDay}</Text>
+                    <Text style={styles.summaryText}><Text style={{fontWeight:'bold'}}>Time:</Text> {startTime} – {endTime}</Text>
                   </ScrollView>
                 </>
               )}
-
               <View style={styles.buttonRow}>
                 <TouchableOpacity onPress={handleCancel} style={styles.cancelButton}>
                   <Text style={styles.cancelText}>Cancel</Text>
                 </TouchableOpacity>
-                {step===3
-                  ? <TouchableOpacity onPress={handleSubmit} style={styles.nextButton}>
-                      <Text style={styles.nextText}>Confirm</Text>
-                    </TouchableOpacity>
-                  : <TouchableOpacity onPress={handleNext} style={styles.nextButton}>
-                      <Text style={styles.nextText}>Next</Text>
-                    </TouchableOpacity>
-                }
+                <TouchableOpacity onPress={step===3?handleSubmit:handleNext} style={styles.nextButton}>
+                  <Text style={styles.nextText}>{step===3?'Confirm':'Next'}</Text>
+                </TouchableOpacity>
               </View>
-
             </View>
           </View>
         </View>
@@ -331,19 +289,20 @@ const styles = StyleSheet.create({
   details: { fontSize:16,fontWeight:'bold',marginBottom:8 },
   input: { width:'100%',borderColor:'black',borderWidth:2,borderRadius:16,padding:12,marginBottom:10 },
   daySelector:{ height:66,borderRadius:5,borderWidth:1,borderColor:'black',marginVertical:8 },
-  dayOption:{ paddingHorizontal:15,paddingVertical:10,marginHorizontal:5,borderRadius:10,borderWidth:1,borderColor:'#ccc',justifyContent:'center',alignItems:'center'},
-  selectedDay:{ backgroundColor:'#e8f4e8',borderColor:'#4CAF50',borderWidth:2},
-  dayOptionText:{ fontSize:18}, selectedDayText:{ fontSize:16,fontWeight:'bold',color:'#2E7D32'},
-  timeContainer:{ flexDirection:'row',justifyContent:'space-between',marginVertical:8},
-  timeColumn:{ flex:1,marginHorizontal:4},
-  timeLabel:{ fontSize:16,fontWeight:'bold',alignSelf:'center'},
-  timePickerContainer:{ borderRadius:5,borderWidth:1,borderColor:'black',overflow:'hidden'},
-  timePicker:{ height:140,},
-  summaryText:{ fontSize:18,marginVertical:5},
-  buttonRow:{ flexDirection:'row',justifyContent:'space-evenly',marginTop:20},
-  cancelButton:{ padding:10,backgroundColor:'#ffdddd',borderRadius:3,borderWidth:2,width:'40%',alignItems:'center', paddingHorizontal: 10, marginRight: 10},
-  cancelText:{ fontWeight:'bold',fontSize:20},
-  nextButton:{ padding:10,backgroundColor:'#d4f7d4',borderRadius:3,borderWidth:2,width:'40%',alignItems:'center', paddingHorizontal: 10, marginLeft: 10},
-  nextText:{ fontWeight:'bold',fontSize:20},
-  reviewScrollContainer:{ paddingBottom:30},
+  dayOption:{ paddingHorizontal:15,paddingVertical:10,marginHorizontal:5,borderRadius:10,borderWidth:1,borderColor:'#ccc',justifyContent:'center',alignItems:'center' },
+  selectedDay:{ backgroundColor:'#e8f4e8',borderColor:'#4CAF50',borderWidth:2 },
+  dayOptionText:{ fontSize:18 }, selectedDayText:{ fontSize:16,fontWeight:'bold',color:'#2E7D32' },
+  timeContainer:{ flexDirection:'row',justifyContent:'space-between',marginVertical:8 },
+  timeColumn:{ flex:1,marginHorizontal:4 },
+  timeLabel:{ fontSize:16,fontWeight:'bold',alignSelf:'center' },
+  timePickerContainer:{ borderRadius:5,borderWidth:1,borderColor:'black',overflow:'hidden' },
+  timePicker:{ height:140 },
+  summaryText:{ fontSize:18,marginVertical:5 },
+  buttonRow:{ flexDirection:'row',justifyContent:'space-evenly',marginTop:20 },
+  cancelButton:{ padding:10,backgroundColor:'#ffdddd',borderRadius:3,borderWidth:2,width:'40%',alignItems:'center' },
+  cancelText:{ fontWeight:'bold',fontSize:20 },
+  nextButton:{ padding:10,backgroundColor:'#d4f7d4',borderRadius:3,borderWidth:2,width:'40%',alignItems:'center' },
+  nextText:{ fontWeight:'bold',fontSize:20 },
+  reviewScrollContainer:{ paddingBottom:30 },
 });
+
