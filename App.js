@@ -15,6 +15,7 @@ import EventCard       from './screens/EventCard';
 import DayCalendar     from './screens/DayCalendar';
 import Event           from './screens/Event';
 import WheelOfFortune  from './screens/WheelOfFortune';
+import CreateAccountScreen  from './screens/CreateAccountScreen';
 
 const Stack = createStackNavigator();
 
@@ -33,6 +34,7 @@ export default function App() {
           component={LoginScreen} 
           options={{ headerShown: false }} 
         />
+      
 
         {/* Busy‑time entry / editing */}
         <Stack.Screen 
@@ -54,6 +56,11 @@ export default function App() {
         <Stack.Screen 
           name="EventsOfWeek" 
           component={EventsOfWeek} 
+          options={{ headerShown: false }} 
+        />
+          <Stack.Screen 
+          name="CreateAccountScreen" 
+          component={CreateAccountScreen} 
           options={{ headerShown: false }} 
         />
         <Stack.Screen 

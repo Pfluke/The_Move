@@ -11,7 +11,7 @@ import { app } from '../firebaseConfig';
 
 const db = getFirestore(app);
 
-const LoginScreen = ({ navigation }) => {
+const CreateAccountScreen = ({ navigation }) => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
@@ -103,14 +103,14 @@ const LoginScreen = ({ navigation }) => {
             </View>
             <View style={styles.titleUnderline} />
             <View style={styles.headerContainer}>
-              <Text style={styles.header}>...okay, but what is it??</Text>
+              <Text style={styles.header}>...Welcomes You</Text>
             </View>
             <View style={styles.textBubbleBig}><Text style={{fontSize:9}}> </Text></View>
             <View style={styles.textBubbleSmall}><Text style={{fontSize:6}}> </Text></View>
           </View>
 
           <View style={styles.loginContainer}>
-            <Text style={styles.login}>LOG IN</Text>
+            <Text style={styles.login}>CREATE ACCOUNT</Text>
             <View style={styles.loginUnderline}/>
             {errorMessage ? <Text style={styles.errorText}>{errorMessage}</Text> : null}
             <TextInput
@@ -134,13 +134,14 @@ const LoginScreen = ({ navigation }) => {
               onKeyPress={handleKeyPress}
             />
 
-            <TouchableOpacity style={styles.button} onPress={() => navigation.navigate('CreateAccountScreen')}>
-              <Text style={styles.buttonText}>CREATE ACCOUNT</Text>
+            <TouchableOpacity style={styles.button} onPress={handleCreate}>
+              <Text style={styles.buttonText}>CREATE</Text>
             </TouchableOpacity>
             <View style={styles.buttonSpacer}/>
-            <TouchableOpacity style={styles.button} onPress={handleLogin}>
-              <Text style={styles.buttonText}>LOGIN</Text>
+            <TouchableOpacity style={styles.button} onPress={() => navigation.navigate('LoginScreen')}>
+                <Text style={styles.buttonText}>BACK</Text>
             </TouchableOpacity>
+            <View style={styles.buttonSpacer}/>
             {loginMessage ? <Text style={styles.successText}>{loginMessage}</Text> : null}
           </View>
         </KeyboardAvoidingView>
@@ -279,4 +280,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default LoginScreen;
+export default CreateAccountScreen;
