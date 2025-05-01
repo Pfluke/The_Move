@@ -303,11 +303,11 @@ const styles = StyleSheet.create({
   },
   declineButton: {
     borderColor: '#FF6B6B',
-    backgroundColor: '#FF6B6B',
+    backgroundColor: '#fd5c63',
   },
   acceptButton: {
     borderColor: '#51B27E',
-    backgroundColor: '#51B27E',
+    backgroundColor: '#71BC78',
   },
   buttonText: {
     fontSize: 18,
