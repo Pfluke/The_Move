@@ -188,7 +188,6 @@ const styles = StyleSheet.create({
     marginBottom: 2,
     marginTop: 15,
     paddingTop: 2,
-    paddingBottom: 2,
     paddingLeft: 8,
     paddingRight: 8,
     borderRadius: 20,
@@ -220,13 +219,12 @@ const styles = StyleSheet.create({
   },
   loginContainer: {
     width: '100%',
-    marginBottom: 50,
-    marginTop: 115,
+    marginBottom: 80,
     padding: 20,
   },
   login: {
     fontSize: 24,
-    paddingTop: 20,
+    paddingTop: 0,
     paddingBottom: 5,
     fontWeight: 'bold',
     color: '#000000',

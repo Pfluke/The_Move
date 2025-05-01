@@ -177,8 +177,20 @@ const EventCard = ({ navigation, route }) => {
           <Text style={styles.eventTitle}>{eventData.name}</Text>
 
           <View style={styles.detailsContainer}>
-            <Text style={styles.detailText}>🕒 {eventData.startTime} - {eventData.endTime}</Text>
-            <Text style={styles.detailText}>📅 {eventData.day || "NO DAY"}</Text>
+            <MaterialIcons 
+                name="clock-o"
+                size={30}
+                color="black"
+                alignSelf='center'
+             />
+            <Text style={styles.detailText}> {eventData.startTime} - {eventData.endTime}</Text>
+            <MaterialIcons 
+                name="calander-today"
+                size={20}
+                color="black"
+                alignSelf='center'
+             />
+            <Text style={styles.detailText}> {eventData.day || "NO DAY"}</Text>
             {/* <Text style={styles.detailText}>📍 {eventData.location || 'No location'}</Text> */}
           </View>
 

@@ -59,6 +59,8 @@ export default function AddEventModal({ visible, onClose, onSubmit }) {
   const [startTime, setStartTime] = useState('9:00 AM');
   const [endTime, setEndTime] = useState('5:00 PM');
   const [descriptionWarning, setDescriptionWarning] = useState(false);
+  const [locationTitle, setLocationTitle] = useState('');
+  const [address, setAddress] = useState('');
 
   useEffect(() => {
     if (!groupName) return;
@@ -122,14 +124,16 @@ export default function AddEventModal({ visible, onClose, onSubmit }) {
         Alert.alert('Title Required','Please enter a title.');
         return;
       }
-      if (!description.trim() && !descriptionWarning) {
-        setDescriptionWarning(true);
-        Alert.alert('Missing Details','Your buddies may appreciate more info.');
+      setStep(2);
+  
+    } else if (step === 2) {
+      if (!locationTitle) {
+        Alert.alert('Missing Info','Please enter a location.');
         return;
       }
-      setStep(2);
-
-    } else {
+      setStep(3);
+  
+    } else if (step === 3) {
       if (!selectedDay) {
         Alert.alert('Missing Info','Please select a day.');
         return;
@@ -138,7 +142,6 @@ export default function AddEventModal({ visible, onClose, onSubmit }) {
         Alert.alert('Invalid Time','End must be after start.');
         return;
       }
-
       const { busyCount, conflicts } = await countBusyMembersForTime(selectedDay, startTime, endTime);
       if (busyCount > 0) {
         Alert.alert(
@@ -146,12 +149,12 @@ export default function AddEventModal({ visible, onClose, onSubmit }) {
           `${busyCount} ${busyCount === 1 ? 'person is' : 'people are'} busy during this time slot:\n\n${conflicts.join('\n')}`,
           [
             { text:'Reschedule', style:'cancel' },
-            { text:'Continue', onPress:() => setStep(3) }
+            { text:'Continue', onPress:() => setStep(4) }
           ]
         );
-        return;
+      } else {
+        setStep(4);
       }
-      setStep(3);
     }
   };
 
@@ -159,6 +162,8 @@ export default function AddEventModal({ visible, onClose, onSubmit }) {
     setStep(1);
     setTitle('');
     setDescription('');
+    setLocationTitle('');
+    setAddress('');
     setSelectedDay('');
     setStartTime('9:00 AM');
     setEndTime('5:00 PM');
@@ -181,7 +186,8 @@ export default function AddEventModal({ visible, onClose, onSubmit }) {
         <View style={styles.overlay}>
           <View style={[
             step===1 ? styles.titleModalContent :
-            step===2 ? styles.dateAndTimeModalContent :
+            step===2 ? styles.locationModalContent :
+            step===3 ? styles.dateAndTimeModalContent :
             styles.reviewModalContent
           ]}>
             <View style={styles.innerModal}>
@@ -208,9 +214,34 @@ export default function AddEventModal({ visible, onClose, onSubmit }) {
                   />
                 </>
               )}
+
               {step===2 && (
                 <>
-                  <Text style={styles.header}>Choose Day & Time</Text>
+                  <Text style={styles.header}>Where At?</Text>
+                  <Text style={styles.details}>Location Title</Text>
+                  <TextInput
+                    placeholder="Location"
+                    placeholderTextColor="#888"
+                    textAlign="center"
+                    value={locationTitle}
+                    onChangeText={setLocationTitle}
+                    style={styles.input}
+                  />
+                  <Text style={styles.details}>Optional: Address</Text>
+                  <TextInput
+                    placeholder="Address"
+                    placeholderTextColor="#888"
+                    textAlign="center"
+                    value={address}
+                    onChangeText={setAddress}
+                    style={[styles.input]}
+                  />
+                </>
+              )}
+              {step===3 && (
+                <>
+                  <Text style={styles.header}>Where at?</Text>
+                  <Text style={styles.subHeader}>Choose Day & Time</Text>
                   <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.daySelector}>
                     {DAYS.map(day=>(
                       <TouchableOpacity
@@ -252,12 +283,12 @@ export default function AddEventModal({ visible, onClose, onSubmit }) {
                   </View>
                 </>
               )}
-              {step===3 && (
+              {step===4 && (
                 <>
-                  <Text style={[styles.header,styles.reviewHeader]}>Review Event</Text>
+                  <Text style={[styles.header,styles.reviewHeader]}>Look Good?</Text>
                   <ScrollView contentContainerStyle={styles.reviewScrollContainer}>
                     <Text style={styles.summaryText}><Text style={{fontWeight:'bold'}}>Title:</Text> {title}</Text>
-                    <Text style={styles.summaryText}><Text style={{fontWeight:'bold'}}>Details:</Text> {description||'None'}</Text>
+                    <Text style={styles.summaryText}><Text style={{fontWeight:'bold'}}>Details:</Text> {description.trim('/n')||'None'}</Text>
                     <Text style={styles.summaryText}><Text style={{fontWeight:'bold'}}>Day:</Text> {selectedDay}</Text>
                     <Text style={styles.summaryText}><Text style={{fontWeight:'bold'}}>Time:</Text> {startTime} – {endTime}</Text>
                   </ScrollView>
@@ -267,8 +298,8 @@ export default function AddEventModal({ visible, onClose, onSubmit }) {
                 <TouchableOpacity onPress={handleCancel} style={styles.cancelButton}>
                   <Text style={styles.cancelText}>Cancel</Text>
                 </TouchableOpacity>
-                <TouchableOpacity onPress={step===3?handleSubmit:handleNext} style={styles.nextButton}>
-                  <Text style={styles.nextText}>{step===3?'Confirm':'Next'}</Text>
+                <TouchableOpacity onPress={step===4?handleSubmit:handleNext} style={styles.nextButton}>
+                  <Text style={styles.nextText}>{step===4?'Confirm':'Next'}</Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -281,15 +312,17 @@ export default function AddEventModal({ visible, onClose, onSubmit }) {
 
 const styles = StyleSheet.create({
   overlay: { flex:1,justifyContent:'center',alignItems:'center',backgroundColor:'rgba(0,0,0,0.6)' },
-  titleModalContent: { backgroundColor:'white',borderRadius:20,padding:25,width:'90%',height:'45%' },
-  dateAndTimeModalContent: { backgroundColor:'white',borderRadius:20,padding:25,width:'95%',height:'52%' },
-  reviewModalContent: { backgroundColor:'white',borderRadius:20,padding:25,width:'85%',height:'40%' },
+  titleModalContent: { backgroundColor:'white',borderRadius:20,padding:28,width:'90%',height:'45%' },
+  locationModalContent: { backgroundColor:'white',borderRadius:20,padding:18,width:'90%',height:'40%' },
+  dateAndTimeModalContent: { backgroundColor:'white',borderRadius:20,padding:16,width:'95%',height:'54%' },
+  reviewModalContent: { backgroundColor:'white',borderRadius:20,padding:25,width:'85%',height:'45%' },
   innerModal: { alignItems:'center',justifyContent:'center' },
-  header: { fontSize:30,fontWeight:'bold',marginBottom:16,alignSelf:'center' },
+  header: { fontSize:45,fontWeight:'bold',marginBottom:6,alignSelf:'center' },
+  subHeader: { fontSize:18,fontWeight:'bold',marginBottom:6,alignSelf:'center' },
   reviewHeader: { marginBottom:10 },
   details: { fontSize:16,fontWeight:'bold',marginBottom:8 },
-  input: { width:'100%',borderColor:'black',borderWidth:2,borderRadius:16,padding:12,marginBottom:10 },
-  daySelector:{ height:66,borderRadius:5,borderWidth:1,borderColor:'black',marginVertical:8 },
+  input: { width:'90%',borderColor:'black',borderWidth:2,borderRadius:16,padding:12,marginBottom:10, alignSelf: 'center',},
+  daySelector:{ height:66,borderRadius:5,borderWidth:1,borderColor:'black',marginVertical:8, marginHorizontal: 4 },
   dayOption:{ paddingHorizontal:15,paddingVertical:10,marginHorizontal:5,borderRadius:10,borderWidth:1,borderColor:'#ccc',justifyContent:'center',alignItems:'center' },
   selectedDay:{ backgroundColor:'#e8f4e8',borderColor:'#4CAF50',borderWidth:2 },
   dayOptionText:{ fontSize:18 }, selectedDayText:{ fontSize:16,fontWeight:'bold',color:'#2E7D32' },
