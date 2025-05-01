@@ -91,6 +91,34 @@ const EventScreen = ({ navigation, route }) => {
             style={styles.container}
             keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
           >
+
+            {/* Go to Group Screen Button */}
+            <View style={styles.topBarContainer}>
+              <TouchableOpacity
+                style={styles.topBarButton}
+                onPress={() =>
+                  navigation.navigate('GroupScreen', { username })}
+              >
+                <MaterialIcons
+                  name="arrow-back"
+                  size={60}
+                  color="black"
+                />
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.topBarButton}
+                onPress={() => {
+                  Alert.alert('Options Pressed', 'Implement options action here.');
+                }}
+              >
+                <MaterialIcons
+                  name="groups"
+                  size={56}
+                  color="black"
+                />
+              </TouchableOpacity>
+            </View>
     
           {/* Group Name */}
           <View style={styles.headerContainer}>
@@ -102,7 +130,7 @@ const EventScreen = ({ navigation, route }) => {
           </View>
 
         {/* Day Buttons */}
-        <View style={styles.dayButtonsContainer}>
+        {/* <View style={styles.dayButtonsContainer}>
           {sortedDaysOfWeek.map((day, index) => (
             <TouchableOpacity
               key={index}
@@ -118,7 +146,7 @@ const EventScreen = ({ navigation, route }) => {
               </Text>
             </TouchableOpacity>
           ))}
-        </View>
+        </View> */}
         
         <View style={styles.bottomButtonContainer}>
           <View style={styles.weekEventsContainer}>
@@ -135,7 +163,7 @@ const EventScreen = ({ navigation, route }) => {
               }
             >
               <Text style={styles.customButtonText}>
-                All Events
+                View All Events
               </Text>
             </TouchableOpacity>
           </View>
@@ -152,7 +180,7 @@ const EventScreen = ({ navigation, route }) => {
               }
             >
               <Text style={styles.customButtonText}>
-                New Events
+                View New Events
               </Text>
             </TouchableOpacity>
           </View>
@@ -160,7 +188,7 @@ const EventScreen = ({ navigation, route }) => {
         
         <View style={styles.bottomButtonContainer}>
 
-            {/* Go to Group Screen Button */}
+            {/* Go to Group Screen Button
             <View style={styles.buttonContainer}>
               <TouchableOpacity
                 style={styles.customButton}
@@ -177,24 +205,24 @@ const EventScreen = ({ navigation, route }) => {
                   Group Screen
                 </Text>
               </TouchableOpacity>
-            </View>
+            </View> */}
 
             {/* Add Event Button */}
             <View style={styles.buttonContainer}>
               <TouchableOpacity
-                style={styles.customButton}
+                style={styles.addEventButton}
                 onPress={() => 
                   setShowEventModal(true)
                 }
               >
                 <MaterialIcons
                   name="add"
-                  size={60}
+                  size={110}
                   color="black"
                   alignSelf='center'
                 />
-                <Text style={styles.customButtonText}>
-                  Add Event
+                <Text style={[styles.customButtonText, {fontSize: 28}]}>
+                  Add New Event
                 </Text>
               </TouchableOpacity>
             </View>
@@ -215,17 +243,28 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#FFFFFF',
   },
+  topBarContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 15,
+    paddingTop: Platform.OS === 'ios' ? 0 : 6,
+    width: '100%',
+  },
+  topBarButton: {
+      padding: 10, // Makes the touch area slightly larger around the icon
+  },
   headerContainer: { // header container styling
     backgroundColor: '#FFFFFF',
-    paddingBottom: 15,
-    marginTop: 6,
+    paddingBottom: 10,
   },
   groupNameContainer: { // group name container
     alignItems: 'center',
     paddingHorizontal: 15,
+    marginTop: 10,
   },
   groupNameText: { // text styling for group name
-    fontSize: 43,
+    fontSize: 50,
     fontWeight: '800',
     color: '#000000',
     textAlign: 'center',
@@ -243,15 +282,17 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     justifyContent: 'center',
     alignSelf: 'center',
-    width: 160,
+    width: 320,
+    marginTop: 10,
   },
   weekEventsButton: {
     backgroundColor: 'transparent',
     borderRadius: 5,
     borderWidth: 3,
-    height: 60,
+    height: 90,
     justifyContent: 'center',
-    alignItems: 'center'
+    alignItems: 'center',
+    marginBottom: 30,
   },
   dayButtonsContainer: {
     flexDirection: 'column',
@@ -279,36 +320,39 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
   },
   bottomButtonContainer: {
-    flexDirection: "row",
+    flexDirection: "col",
     justifyContent: 'space-around',
     paddingHorizontal: 10,
-    marginTop: 8,
+    marginTop: 20,
     backgroundColor: '#FFFFFF',
   },
   buttonContainer: {
     alignItems: 'center',
-    width: '45%',
   },
-  customButton: {
-    marginTop: 6,
+  backButton: {
+    marginRight: 300,
+    marginTop: 15,
+  },
+  addEventButton: {
     backgroundColor: 'transparent',
     paddingVertical: 0,
     paddingHorizontal: 5,
     borderRadius: 5,
     borderWidth: 3,
-    height: 120,
-    width: 140,
+    height: 200,
+    width: 200,
     justifyContent: 'center',
   },
   customButtonText: {
     color: 'black',
-    fontSize: 18,
+    fontSize: 24,
     fontWeight: 'bold',
     textAlign: 'center',
   },
   todayButton: {
     backgroundColor: 'black',
   },
+  
 
 
   //FOREHEAD STYLING:

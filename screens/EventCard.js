@@ -156,7 +156,7 @@ const EventCard = ({ navigation, route }) => {
   if (!eventData) {
     return (
       <View style={styles.loadingContainer}>
-        <Text style={{ fontSize: 18 }}>No more events 🎉</Text>
+        <Text style={{ fontSize: 18, marginBottom: 20, fontWeight: 'bold' }}>NO MORE NEW EVENTS</Text>
         <TouchableOpacity
           style={styles.button}
           onPress={() => navigation.navigate('EventScreen', { username, groupName })}
@@ -175,21 +175,27 @@ const EventCard = ({ navigation, route }) => {
       >
         <View style={styles.cardInfo}>
           <Text style={styles.eventTitle}>{eventData.name}</Text>
-
+          <View style={styles.underline} />
           <View style={styles.detailsContainer}>
-            <MaterialIcons 
-                name="clock-o"
-                size={30}
-                color="black"
-                alignSelf='center'
-             />
+            <View style={{flexDirection: 'row', alignSelf: 'center', paddingBottom: 10, paddingTop: 10}}>
+              <Text style={{fontSize: 26, fontWeight: 'bold'}}> TIME</Text>
+              <MaterialIcons 
+                  name="schedule"
+                  size={30}
+                  color="black"
+                  alignSelf='center'
+              />
+            </View>
             <Text style={styles.detailText}> {eventData.startTime} - {eventData.endTime}</Text>
-            <MaterialIcons 
-                name="calander-today"
-                size={20}
-                color="black"
-                alignSelf='center'
-             />
+            <View style={{flexDirection: 'row', alignSelf: 'center', paddingBottom: 10, paddingTop: 10}}>
+              <Text style={{fontSize: 26, fontWeight: 'bold'}}> DAY</Text>
+              <MaterialIcons 
+                  name="event"
+                  size={30}
+                  color="black"
+                  alignSelf='center'
+              />
+            </View>
             <Text style={styles.detailText}> {eventData.day || "NO DAY"}</Text>
             {/* <Text style={styles.detailText}>📍 {eventData.location || 'No location'}</Text> */}
           </View>
@@ -250,11 +256,10 @@ const styles = StyleSheet.create({
     height: '100%',
   },
   eventTitle: {
-    fontSize: 26,
+    fontSize: 56,
     fontWeight: 'bold',
-    marginBottom: 15,
     color: '#000',
-    textAlign: 'left',
+    textAlign: 'center',
   },
   detailsContainer: {
     marginBottom: 15,
@@ -266,6 +271,8 @@ const styles = StyleSheet.create({
     fontSize: 18,
     marginBottom: 8,
     color: '#000',
+    alignSelf: 'center',
+    marginTop: 10,
   },
   descriptionScroll: {
     flex: 1,
@@ -315,6 +322,14 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  underline: { 
+    height: 4,
+    width: '60%',
+    backgroundColor: 'black',
+    borderRadius: 2,
+    alignSelf: 'center',
+    marginBottom: 20,
   },
 });
 
