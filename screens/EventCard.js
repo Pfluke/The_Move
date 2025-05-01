@@ -159,7 +159,8 @@ const EventCard = ({ navigation, route }) => {
         <Text style={{ fontSize: 18, marginBottom: 20, fontWeight: 'bold' }}>NO MORE NEW EVENTS</Text>
         <TouchableOpacity
           style={styles.button}
-          onPress={() => navigation.navigate('EventScreen', { username, groupName })}
+          //onPress={() => navigation.navigate('EventScreen', { username, groupName })}
+          onPress={() => navigation.goBack()}
         >
           <Text style={styles.buttonText}>Back to Group</Text>
         </TouchableOpacity>
