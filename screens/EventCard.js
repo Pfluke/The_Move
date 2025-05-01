@@ -159,7 +159,8 @@ const EventCard = ({ navigation, route }) => {
         <Text style={{ fontSize: 18, marginBottom: 20, fontWeight: 'bold' }}>NO MORE NEW EVENTS</Text>
         <TouchableOpacity
           style={styles.button}
-          onPress={() => navigation.navigate('EventScreen', { username, groupName })}
+          //onPress={() => navigation.navigate('EventScreen', { username, groupName })}
+          onPress={() => navigation.goBack()}
         >
           <Text style={styles.buttonText}>Back to Group</Text>
         </TouchableOpacity>
@@ -178,7 +179,7 @@ const EventCard = ({ navigation, route }) => {
           <View style={styles.underline} />
           <View style={styles.detailsContainer}>
             <View style={{flexDirection: 'row', alignSelf: 'center', paddingBottom: 10, paddingTop: 10}}>
-              <Text style={{fontSize: 26, fontWeight: 'bold'}}> TIME</Text>
+              <Text style={{fontSize: 26, fontWeight: 'bold'}}>TIME</Text>
               <MaterialIcons 
                   name="schedule"
                   size={30}
@@ -188,7 +189,7 @@ const EventCard = ({ navigation, route }) => {
             </View>
             <Text style={styles.detailText}> {eventData.startTime} - {eventData.endTime}</Text>
             <View style={{flexDirection: 'row', alignSelf: 'center', paddingBottom: 10, paddingTop: 10}}>
-              <Text style={{fontSize: 26, fontWeight: 'bold'}}> DAY</Text>
+              <Text style={{fontSize: 26, fontWeight: 'bold'}}>DAY</Text>
               <MaterialIcons 
                   name="event"
                   size={30}

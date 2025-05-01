@@ -97,7 +97,8 @@ const EventScreen = ({ navigation, route }) => {
               <TouchableOpacity
                 style={styles.topBarButton}
                 onPress={() =>
-                  navigation.navigate('GroupScreen', { username })}
+                  //navigation.navigate('GroupScreen', { username })}
+                  navigation.goBack()}
               >
                 <MaterialIcons
                   name="arrow-back"
