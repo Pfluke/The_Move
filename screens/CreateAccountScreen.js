@@ -97,17 +97,6 @@ const CreateAccountScreen = ({ navigation }) => {
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
           style={styles.container}
         >
-          <View style={styles.titleContainer}>
-            <View style={styles.titleTransformContainer}>
-              <Text style={styles.title}>THE MOVE</Text>
-            </View>
-            <View style={styles.titleUnderline} />
-            <View style={styles.headerContainer}>
-              <Text style={styles.header}>...Welcomes You</Text>
-            </View>
-            <View style={styles.textBubbleBig}><Text style={{fontSize:9}}> </Text></View>
-            <View style={styles.textBubbleSmall}><Text style={{fontSize:6}}> </Text></View>
-          </View>
 
           <View style={styles.loginContainer}>
             <Text style={styles.login}>CREATE ACCOUNT</Text>

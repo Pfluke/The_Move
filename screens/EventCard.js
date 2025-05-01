@@ -178,8 +178,8 @@ const EventCard = ({ navigation, route }) => {
           <Text style={styles.eventTitle}>{eventData.name}</Text>
           <View style={styles.underline} />
           <View style={styles.detailsContainer}>
-            <View style={{flexDirection: 'row', alignSelf: 'center', paddingBottom: 10, paddingTop: 10}}>
-              <Text style={{fontSize: 26, fontWeight: 'bold'}}>TIME</Text>
+            <View style={{flexDirection: 'row', alignSelf: 'center', paddingBottom: 1, paddingTop: 10}}>
+              <Text style={{fontSize: 26, fontWeight: 'bold'}}> TIME</Text>
               <MaterialIcons 
                   name="schedule"
                   size={30}
@@ -188,8 +188,8 @@ const EventCard = ({ navigation, route }) => {
               />
             </View>
             <Text style={styles.detailText}> {eventData.startTime} - {eventData.endTime}</Text>
-            <View style={{flexDirection: 'row', alignSelf: 'center', paddingBottom: 10, paddingTop: 10}}>
-              <Text style={{fontSize: 26, fontWeight: 'bold'}}>DAY</Text>
+            <View style={{flexDirection: 'row', alignSelf: 'center', paddingBottom: 1, paddingTop: 10}}>
+              <Text style={{fontSize: 26, fontWeight: 'bold'}}> DAY</Text>
               <MaterialIcons 
                   name="event"
                   size={30}
@@ -198,6 +198,31 @@ const EventCard = ({ navigation, route }) => {
               />
             </View>
             <Text style={styles.detailText}> {eventData.day || "NO DAY"}</Text>
+            <View style={{flexDirection: 'row', alignSelf: 'center', paddingBottom: 1, paddingTop: 10}}>
+              <Text style={{fontSize: 26, fontWeight: 'bold'}}> LOCATION</Text>
+              <MaterialIcons 
+                  name="location-city"
+                  size={30}
+                  color="black"
+                  alignSelf='center'
+              />
+            </View>
+            <Text style={styles.detailText}> {eventData.location || 'No location'} </Text>
+            {eventData.address ? (
+              <View>
+                <View style={{ flexDirection: 'row', alignSelf: 'center', paddingBottom: 1, paddingTop: 10 }}>
+                  <Text style={{ fontSize: 26, fontWeight: 'bold' }}> ADDRESS</Text>
+                  <MaterialIcons 
+                    name="pin-drop"
+                    size={30}
+                    color="black"
+                    style={{ alignSelf: 'center' }}
+                  />
+                </View>
+                <Text style={styles.detailText}>{eventData.address}</Text>
+              </View>
+            ) : null}
+
             {/* <Text style={styles.detailText}>📍 {eventData.location || 'No location'}</Text> */}
           </View>
 
@@ -273,7 +298,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     color: '#000',
     alignSelf: 'center',
-    marginTop: 10,
+    marginTop: 1,
   },
   descriptionScroll: {
     flex: 1,
