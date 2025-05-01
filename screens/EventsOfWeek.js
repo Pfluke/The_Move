@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { 
   View, Text, Alert, StyleSheet, ScrollView, TouchableOpacity, 
-  KeyboardAvoidingView, Platform, SafeAreaView, StatusBar 
+  KeyboardAvoidingView, Platform, SafeAreaView, StatusBar, TouchableWithoutFeedback 
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { getFirestore, doc, updateDoc, onSnapshot } from 'firebase/firestore';
@@ -30,6 +30,8 @@ const EventsOfWeek = ({ navigation, route }) => {
   const [loadingEventData, setLoadingEventData] = useState(false);
   const [eventData, setEventData] = useState({});
   const [topEventKeys, setTopEventKeys] = useState([]);
+  const [showFilterModal, setShowFilterModal] = useState(false);
+  const [filterDay, setFilterDay] = useState(null);
 
   const groupDocRef = doc(db, "groups", groupName);
 
@@ -129,6 +131,21 @@ const EventsOfWeek = ({ navigation, route }) => {
         }
       };
 
+      const daysOfWeek = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+
+      const getSortedDays = () => {
+        const today = new Date();
+        const currentDayIndex = today.getDay();
+        const sortedDays = [
+          ...daysOfWeek.slice(currentDayIndex),
+          ...daysOfWeek.slice(0, currentDayIndex)
+        ];
+        
+        return sortedDays;
+      };
+
+      const sortedDaysOfWeek = getSortedDays();
+
       setEventData(updatedEventData);
       updateTopEvents(updatedEventData);
 
@@ -153,6 +170,7 @@ const EventsOfWeek = ({ navigation, route }) => {
   }
 
   return (
+    <View style={{ flex: 1, position: 'relative' }}>
     <SafeAreaView style={styles.safeArea}>
       <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
       
@@ -162,14 +180,18 @@ const EventsOfWeek = ({ navigation, route }) => {
           onPress={() => navigation.goBack()} 
           style={styles.backButton}
         >
-          <MaterialIcons name="arrow-back" size={28} color="#000000" />
+          <MaterialIcons name="arrow-back" size={50} color="#000000" />
         </TouchableOpacity>
 
         <Text style={styles.headerTitle}>
-          {selectedDay === "WEEK" ? "WEEKLY EVENTS" : selectedDay?.toUpperCase() || "EVENTS"}
+          {filterDay ? filterDay.toUpperCase() + " EVENTS" : "WEEKLY EVENTS"}
         </Text>
-
-        <View style={styles.backButton} />
+        <TouchableOpacity
+          onPress={() => setShowFilterModal(true)}
+          style={styles.filterButton}
+        >
+          <MaterialIcons name="filter-list" size={34} color="#000000" />
+        </TouchableOpacity>
       </View>
 
       {/* Content */}
@@ -179,10 +201,15 @@ const EventsOfWeek = ({ navigation, route }) => {
       >
         <ScrollView contentContainerStyle={styles.scrollContainer}>
           {eventData && Object.keys(eventData).length === 0 ? (
-            <Text style={styles.noEventsText}>No events scheduled</Text>
+            <Text style={styles.noEventsText}>NO EVENTS SCHEDULED</Text>
           ) : (
             <View style={styles.eventsContainer}>
               {Object.entries(eventData)
+                .filter(([, data]) => {
+                  if (!filterDay) return true;
+                  const days = data.days || [data.day];
+                  return days?.map(d => d.toLowerCase()).includes(filterDay.toLowerCase());
+                })
                 .sort(([, a], [, b]) => (b.votes || 0) - (a.votes || 0))
                 .map(([eventKey, data]) => {
                   const userVote = getUserVote(eventKey);
@@ -261,6 +288,27 @@ const EventsOfWeek = ({ navigation, route }) => {
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
+    {showFilterModal && (
+      <TouchableWithoutFeedback onPress={() => setShowFilterModal(false)}>
+        <View style={styles.overlay}>
+          <View style={styles.filterModalContent}>
+            {["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday", null].map(day => (
+              <TouchableOpacity
+                key={day || "All"}
+                onPress={() => {
+                  setFilterDay(day);
+                  setShowFilterModal(false);
+                }}
+                style={styles.modalItem}
+              >
+                <Text style={styles.modalItemText}>{day || "All Days"}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </View>
+      </TouchableWithoutFeedback>
+      )}
+  </View>
   );
 };
 
@@ -286,22 +334,27 @@ const styles = StyleSheet.create({
   header: { 
     flexDirection: 'row', 
     alignItems: 'center', 
-    padding: 16, 
-    borderBottomWidth: 1, 
-    borderBottomColor: '#E0E0E0' 
+    paddingVertical: 10, 
+    borderBottomWidth: 2, 
+    borderBottomColor: '#E0E0E0',
   },
   backButton: { 
-    width: 40, 
-    alignItems: 'center', 
-    justifyContent: 'center' 
+    width: 40,
+    marginLeft: 10,
+  },
+  filterButton: { 
+    marginRight: 14,
   },
   headerTitle: { 
-    fontSize: 25, 
+    fontSize: 28, 
     fontWeight: 'bold', 
     color: '#000000', 
     textTransform: 'uppercase', 
     flex: 1, 
-    textAlign: 'center' },
+    textAlign: 'center',
+    paddingLeft: 10,
+    paddingRight: 10,
+  },
   scrollContainer: { 
     flexGrow: 1, 
     padding: 15 
@@ -381,6 +434,35 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0, 122, 255, 0.1)', 
     borderWidth: 1, 
     borderColor: '#007AFF' 
+  },
+  overlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    zIndex: 10,
+  },
+  filterModalContent: {
+    backgroundColor: 'white',
+    borderRadius: 20,
+    padding: 24,
+    width: '80%',
+    alignItems: 'center'
+  },
+  modalItem: {
+    paddingVertical: 14,
+    width: '100%',
+    alignItems: 'center',
+    borderBottomColor: '#ccc',
+    borderBottomWidth: 1,
+  },
+  modalItemText: {
+    fontSize: 20,
+    fontWeight: 'bold',
   },
 });
 
