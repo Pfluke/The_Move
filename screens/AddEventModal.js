@@ -176,7 +176,7 @@ export default function AddEventModal({ visible, onClose, onSubmit }) {
   };
 
   const handleSubmit = () => {
-    onSubmit({ title: title.trim(), description: description.trim(), day: selectedDay, startTime, endTime });
+    onSubmit({ title: title.trim(), description: description.trim(), day: selectedDay, startTime, endTime, location: locationTitle.trim(), address: address.trim() });
     resetModal();
   };
 

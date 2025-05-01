@@ -177,21 +177,33 @@ const EventCard = ({ navigation, route }) => {
           <Text style={styles.eventTitle}>{eventData.name}</Text>
 
           <View style={styles.detailsContainer}>
-            <MaterialIcons 
+            {/* <MaterialIcons 
                 name="clock-o"
                 size={30}
                 color="black"
                 alignSelf='center'
-             />
-            <Text style={styles.detailText}> {eventData.startTime} - {eventData.endTime}</Text>
-            <MaterialIcons 
+             /> */}
+            <Text style={styles.detailText}> 
+              <Text style={{ fontWeight: 'bold' }}>Time: </Text> {eventData.startTime} - {eventData.endTime}
+            </Text>
+            {/* <MaterialIcons 
                 name="calander-today"
                 size={20}
                 color="black"
                 alignSelf='center'
-             />
-            <Text style={styles.detailText}> {eventData.day || "NO DAY"}</Text>
-            {/* <Text style={styles.detailText}>📍 {eventData.location || 'No location'}</Text> */}
+             /> */}
+            <Text style={styles.detailText}> 
+              <Text style={{ fontWeight: 'bold' }}>Day: </Text> {eventData.day || "NO DAY"}
+            </Text>
+            <Text style={styles.detailText}>
+              <Text style={{ fontWeight: 'bold' }}>Location: </Text> {eventData.location || 'No location'}
+            </Text>
+            {eventData.address ? (
+              <Text style={styles.detailText}>
+                <Text style={{ fontWeight: 'bold' }}>Address: </Text> {eventData.address}
+              </Text>
+            ) : null}
+
           </View>
 
           <ScrollView
@@ -250,7 +262,7 @@ const styles = StyleSheet.create({
     height: '100%',
   },
   eventTitle: {
-    fontSize: 26,
+    fontSize: 32,
     fontWeight: 'bold',
     marginBottom: 15,
     color: '#000',
