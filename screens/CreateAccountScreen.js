@@ -23,38 +23,6 @@ const CreateAccountScreen = ({ navigation }) => {
     setTimeout(() => setErrorMessage(''), 2000);
   };
 
-  const handleLogin = async () => {
-    if (!username || !password) {
-      return showError('PLEASE ENTER BOTH A USERNAME AND PASSWORD');
-    }
-    try {
-      const userRef = doc(db, 'users', username.toLowerCase());
-      const userSnap = await getDoc(userRef);
-      if (!userSnap.exists()) {
-        return showError('User does not exist');
-      }
-      const data = userSnap.data();
-      if (data.password !== password) {
-        return showError('Incorrect password');
-      }
-
-      setLoginMessage('Login successful!');
-      // fetch groups
-      const groupsQuery = query(
-        collection(db, 'groups'),
-        where('members', 'array-contains', username.toLowerCase())
-      );
-      const groupsSnap = await getDocs(groupsQuery);
-      const userGroups = [];
-      groupsSnap.forEach(d => userGroups.push(d.id));
-
-      navigation.navigate('GroupScreen', { username, userGroups });
-    } catch (err) {
-      console.error(err);
-      showError(err.message);
-    }
-  };
-
   const handleCreate = async () => {
     if (!username || !password) {
       return showError('PLEASE ENTER BOTH A USERNAME AND PASSWORD');
@@ -82,7 +50,7 @@ const CreateAccountScreen = ({ navigation }) => {
   const handleKeyPress = e => {
     if (e.nativeEvent.key === 'Enter') {
       Keyboard.dismiss();
-      handleLogin();
+      handleCreate();
     } else if (e.nativeEvent.key === 'Tab') {
       e.preventDefault();
       passwordInputRef.current.focus();
@@ -91,17 +59,24 @@ const CreateAccountScreen = ({ navigation }) => {
 
   return (
     <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-      <SafeAreaView style={{ flex: 1, backgroundColor:"black" }}>
-        <StatusBar barStyle="black-content" />
+      <SafeAreaView style={{ flex: 1, backgroundColor: '#FFFFFF' }}>
+        <StatusBar barStyle="dark-content" />
         <KeyboardAvoidingView
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
           style={styles.container}
         >
+          <View style={styles.header}>
+            <Text style={styles.headerTitle}>THE MOVE</Text>
+            <View style={styles.headerUnderline} />
+          </View>
 
-          <View style={styles.loginContainer}>
-            <Text style={styles.login}>CREATE ACCOUNT</Text>
-            <View style={styles.loginUnderline}/>
+          <View style={styles.contentContainer}>
+            <Text style={styles.sectionTitle}>CREATE ACCOUNT</Text>
+            <View style={styles.sectionUnderline}/>
+            
             {errorMessage ? <Text style={styles.errorText}>{errorMessage}</Text> : null}
+            {loginMessage ? <Text style={styles.successText}>{loginMessage}</Text> : null}
+
             <TextInput
               style={styles.input}
               placeholder="username"
@@ -123,15 +98,21 @@ const CreateAccountScreen = ({ navigation }) => {
               onKeyPress={handleKeyPress}
             />
 
-            <TouchableOpacity style={styles.button} onPress={handleCreate}>
+            <TouchableOpacity 
+              style={styles.button} 
+              onPress={handleCreate}
+            >
               <Text style={styles.buttonText}>CREATE</Text>
             </TouchableOpacity>
+            
             <View style={styles.buttonSpacer}/>
-            <TouchableOpacity style={styles.button} onPress={() => navigation.navigate('LoginScreen')}>
-                <Text style={styles.buttonText}>BACK</Text>
+            
+            <TouchableOpacity 
+              style={styles.button} 
+              onPress={() => navigation.navigate('LoginScreen')}
+            >
+              <Text style={styles.buttonText}>BACK</Text>
             </TouchableOpacity>
-            <View style={styles.buttonSpacer}/>
-            {loginMessage ? <Text style={styles.successText}>{loginMessage}</Text> : null}
           </View>
         </KeyboardAvoidingView>
       </SafeAreaView>
@@ -144,88 +125,43 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#FFFFFF',
   },
-  scrollContainer: {
-    flexGrow: 1, // Ensure the content grows to fill the available space
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  titleContainer: {
-    backgroundColor: 'black',
-    flexDirection: 'column',
-    width: '100%',
-  },
-  titleTransformContainer: {
-    transform: [
-      { scaleX: 0.9 },
-      { scaleY: 2.8 },
-    ],
-  },
-  title: {
-    fontSize: 55,
-    marginTop: 45,
-    fontWeight: 'bold',
-    color: 'white',
-    textAlign: 'center',
-    width: '100%',
-  },
   header: {
-    fontSize: 18,
-    color: 'white',
-  },
-  headerContainer: {
-    backgroundColor: '#007AFF',
-    alignSelf: 'flex-end',
-    marginBottom: 2,
-    marginTop: 15,
-    paddingTop: 2,
-    paddingBottom: 2,
-    paddingLeft: 8,
-    paddingRight: 8,
-    borderRadius: 20,
-    marginRight: 14,
-  },
-  textBubbleBig: {
-    backgroundColor: '#007AFF',
-    borderRadius: 10,
-    alignSelf: 'flex-end',
-    marginRight: 10,
-    marginTop: 2,
-    width: 14,
-  },
-  textBubbleSmall: {
-    backgroundColor: '#007AFF',
-    borderRadius: 10,
-    marginRight: 5,
-    marginBottom: 10,
-    alignSelf: 'flex-end',
-    marginTop: 2,
-    width: 8,
-  },
-  titleUnderline: {
-    height: 5,
-    width: '50%',
-    backgroundColor: 'white',
-    marginTop: 75,
-    alignSelf: 'center',
-  },
-  loginContainer: {
+    paddingTop: Platform.OS === 'ios' ? 0 : 20,
+    paddingBottom: 20,
+    paddingTop: 15,
+    alignItems: 'center',
     width: '100%',
-    marginBottom: 50,
-    marginTop: 115,
+  },
+  headerTitle: {
+    fontSize: 50,
+    fontWeight: '800',
+    color: '#000000',
+    textTransform: 'uppercase',
+  },
+  headerUnderline: {
+    height: 4,
+    width: '40%',
+    backgroundColor: 'black',
+    marginTop: 8,
+    borderRadius: 2,
+  },
+  contentContainer: {
+    flex: 1,
+    width: '100%',
     padding: 20,
   },
-  login: {
-    fontSize: 24,
-    paddingTop: 20,
-    paddingBottom: 5,
+  sectionTitle: {
+    fontSize: 28,
     fontWeight: 'bold',
     color: '#000000',
+    textTransform: 'uppercase',
+    marginBottom: 5,
   },
-  loginUnderline: {
+  sectionUnderline: {
     height: 3,
-    width: '30%',
+    width: '75%',
     backgroundColor: '#000000',
-    marginBottom: 10,
+    marginBottom: 20,
   },
   input: {
     width: '100%',
@@ -256,9 +192,11 @@ const styles = StyleSheet.create({
   },
   successText: {
     marginTop: 10,
+    marginBottom: 10,
     color: '#018749',
     fontSize: 16,
     fontWeight: 'bold',
+    textAlign: 'center',
   },
   errorText: {
     marginBottom: 10,
