@@ -327,22 +327,22 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   declineButton: {
-    borderColor: '#FF6B6B',
-    backgroundColor: '#fd5c63',
+    borderColor: 'black',
+    backgroundColor: '#ffdddd',
   },
   acceptButton: {
-    borderColor: '#51B27E',
-    backgroundColor: '#71BC78',
+    borderColor: 'black',
+    backgroundColor: '#d4f7d4',
   },
   buttonText: {
     fontSize: 18,
     fontWeight: 'bold',
   },
   acceptButtonText: {
-    color: '#FFF',
+    color: 'black',
   },
   declineButtonText: {
-    color: '#FFF',
+    color: 'black',
   },
   loadingContainer: {
     flex: 1,

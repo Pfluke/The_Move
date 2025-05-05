@@ -109,7 +109,8 @@ const CreateAccountScreen = ({ navigation }) => {
             
             <TouchableOpacity 
               style={styles.button} 
-              onPress={() => navigation.navigate('LoginScreen')}
+              // onPress={() => navigation.navigate('LoginScreen')}
+              onPress={() => navigation.goBack()}
             >
               <Text style={styles.buttonText}>BACK</Text>
             </TouchableOpacity>
