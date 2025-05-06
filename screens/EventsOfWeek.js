@@ -8,14 +8,16 @@ import {
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import {
-  getFirestore, doc,
-  updateDoc, onSnapshot, deleteField
+  getFirestore,
+  doc,
+  updateDoc,
+  onSnapshot,
+  deleteField
 } from 'firebase/firestore';
 import { app } from '../firebaseConfig';
 
 const db = getFirestore(app);
 
-// compute card color based on vote total
 const getCardColor = votes => {
   if (!votes) return '#FFFFFF';
   const norm = Math.max(-1, Math.min(1, votes / 10));
@@ -38,7 +40,6 @@ const EventsOfWeek = ({ navigation, route }) => {
   const groupRef = doc(db, 'groups', groupName);
   const scrollRef = useRef(null);
 
-  // Subscribe in real‑time
   useEffect(() => {
     const unsubscribe = onSnapshot(groupRef, snap => {
       if (!snap.exists()) {
@@ -47,18 +48,33 @@ const EventsOfWeek = ({ navigation, route }) => {
       }
 
       const raw = snap.data().slices || {};
-      const filteredEntries = Object.entries(raw).filter(([key, sl]) => {
-        if (selectedDay === 'WEEK') return true;
-        const days = sl.days || (sl.day ? [sl.day] : []);
-        return days.map(d => d.toLowerCase()).includes(selectedDay.toLowerCase());
-      });
+      // Determine which "day" to filter by:
+      //   - If modal = "All", treat as WEEK (no filter)
+      //   - Otherwise use filterDay if set, else selectedDay
+      const dayToShow =
+        filterDay === 'All'
+          ? 'WEEK'
+          : filterDay || selectedDay;
 
-      // Build eventData with computed votes
+      // Build entries, filtering only if dayToShow !== 'WEEK'
+      let entries = Object.entries(raw);
+      if (dayToShow !== 'WEEK') {
+        entries = entries.filter(([_, sl]) => {
+          const days = sl.days || (sl.day ? [sl.day] : []);
+          return days
+            .map(d => d.toLowerCase().trim())
+            .includes(dayToShow.toLowerCase().trim());
+        });
+      }
+
+      // Compute vote totals from voters map
       const withVotes = Object.fromEntries(
-        filteredEntries.map(([key, sl]) => {
+        entries.map(([key, sl]) => {
           const voters = sl.voters || {};
-          const total = Object.values(voters)
-            .reduce((sum, v) => sum + (Number(v) || 0), 0);
+          const total = Object.values(voters).reduce(
+            (sum, v) => sum + (Number(v) || 0),
+            0
+          );
           return [key, { ...sl, votes: total }];
         })
       );
@@ -71,7 +87,7 @@ const EventsOfWeek = ({ navigation, route }) => {
     });
 
     return () => unsubscribe();
-  }, [groupName, selectedDay]);
+  }, [groupName, selectedDay, filterDay]);
 
   const updateTopEvents = events => {
     let max = -Infinity, winners = [];
@@ -96,13 +112,14 @@ const EventsOfWeek = ({ navigation, route }) => {
     if (!sl) return;
     const current = getUserVote(key);
     const next = current === val ? 0 : val;
+    const diff = next - current;
 
-    // Local UI update
+    // Optimistically update UI
     const updated = {
       ...eventData,
       [key]: {
         ...sl,
-        votes: sl.votes + (next - current),
+        votes: sl.votes + diff,
         voters: {
           ...sl.voters,
           [username]: next !== 0 ? next : undefined
@@ -112,7 +129,7 @@ const EventsOfWeek = ({ navigation, route }) => {
     setEventData(updated);
     updateTopEvents(updated);
 
-    // Firestore write: only touch the voter field
+    // Persist only the voter field
     const voterPath = `slices.${key}.voters.${username}`;
     try {
       await updateDoc(groupRef, {
@@ -153,7 +170,9 @@ const EventsOfWeek = ({ navigation, route }) => {
               <View style={styles.cardHeader}>
                 <Text style={styles.eventTitle}>{key}</Text>
                 <View style={styles.voteContainer}>
-                  {isTop && <MaterialIcons name="star" size={24} color="#FFD700" />}
+                  {isTop && (
+                    <MaterialIcons name="star" size={24} color="#FFD700" />
+                  )}
                   <Text style={styles.voteCount}>{sl.votes}</Text>
                 </View>
               </View>
@@ -200,6 +219,7 @@ const EventsOfWeek = ({ navigation, route }) => {
             <MaterialIcons name="filter-list" size={28} />
           </TouchableOpacity>
         </View>
+
         <KeyboardAvoidingView
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
           style={styles.container}
@@ -217,11 +237,20 @@ const EventsOfWeek = ({ navigation, route }) => {
         <TouchableWithoutFeedback onPress={() => setShowFilterModal(false)}>
           <View style={styles.overlay}>
             <View style={styles.filterModalContent}>
-              {['All','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'].map(day => (
+              {[
+                'All',
+                'Monday',
+                'Tuesday',
+                'Wednesday',
+                'Thursday',
+                'Friday',
+                'Saturday',
+                'Sunday'
+              ].map(day => (
                 <TouchableOpacity
                   key={day}
                   onPress={() => {
-                    setFilterDay(day === 'All' ? null : day);
+                    setFilterDay(day);
                     setShowFilterModal(false);
                   }}
                   style={styles.modalItem}
@@ -241,24 +270,37 @@ const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: '#fff' },
   container: { flex: 1, backgroundColor: '#fff' },
   header: {
-    flexDirection: 'row', alignItems: 'center',
-    justifyContent: 'space-between', padding: 10,
-    borderBottomWidth: 1, borderColor: '#eee'
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: 10,
+    borderBottomWidth: 1,
+    borderColor: '#eee'
   },
   headerTitle: { fontSize: 20, fontWeight: 'bold' },
   scrollContainer: { padding: 15 },
   noEventsText: { textAlign: 'center', marginTop: 32, color: '#888' },
 
   eventCard: {
-    marginBottom: 16, borderRadius: 8, padding: 16,
-    borderWidth: 1, borderColor: '#ddd',
-    shadowColor: '#000', shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1, shadowRadius: 4, elevation: 2
+    marginBottom: 16,
+    borderRadius: 8,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: '#ddd',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2
   },
   topEventBorder: { borderColor: '#4CAF50', borderWidth: 2 },
 
   cardContent: { flex: 1 },
-  cardHeader: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 },
+  cardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 8
+  },
   eventTitle: { fontSize: 18, fontWeight: 'bold', flex: 1 },
   voteContainer: { flexDirection: 'row', alignItems: 'center' },
   voteCount: { marginLeft: 4, fontSize: 16, fontWeight: 'bold' },
@@ -268,24 +310,33 @@ const styles = StyleSheet.create({
   votingButtons: { flexDirection: 'row', justifyContent: 'center' },
   voteButton: { padding: 8, marginHorizontal: 16, borderRadius: 8 },
   selectedVote: {
-    backgroundColor: 'rgba(0,122,255,0.1)', borderWidth: 1, borderColor: '#007AFF'
+    backgroundColor: 'rgba(0,122,255,0.1)',
+    borderWidth: 1,
+    borderColor: '#007AFF'
   },
 
   overlay: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: 'rgba(0,0,0,0.6)',
-    justifyContent: 'center', alignItems: 'center'
+    justifyContent: 'center',
+    alignItems: 'center'
   },
   filterModalContent: {
-    backgroundColor: '#fff', borderRadius: 20,
-    padding: 20, width: '80%', alignItems: 'center'
+    backgroundColor: '#fff',
+    borderRadius: 20,
+    padding: 20,
+    width: '80%',
+    alignItems: 'center'
   },
   modalItem: {
-    paddingVertical: 12, width: '100%',
-    alignItems: 'center', borderBottomWidth: 1,
+    paddingVertical: 12,
+    width: '100%',
+    alignItems: 'center',
+    borderBottomWidth: 1,
     borderColor: '#ccc'
   },
   modalItemText: { fontSize: 18, fontWeight: 'bold' }
 });
 
 export default EventsOfWeek;
+
