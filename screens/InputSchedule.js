@@ -1,3 +1,4 @@
+// InputSchedule.js
 import React, { useState, useEffect } from 'react';
 import {
   View,
@@ -22,12 +23,10 @@ export default function InputSchedule({ route, navigation }) {
   const { username } = route.params;
   const userRef = doc(db, 'users', username.toLowerCase());
 
-  // State: day → array of "H:MM AM/PM – H:MM AM/PM" strings
   const [busyTimes, setBusyTimes] = useState(
     daysOfWeek.reduce((acc, d) => { acc[d] = []; return acc }, {})
   );
 
-  // Load and normalize existing busyTimes from Firestore
   useEffect(() => {
     (async () => {
       const snap = await getDoc(userRef);
@@ -137,7 +136,7 @@ export default function InputSchedule({ route, navigation }) {
           text: 'OK', onPress: async () => {
             try {
               await setDoc(userRef, { busyTimes }, { merge: true });
-              navigation.navigate('GroupScreen', { username, userGroups: [] });
+              navigation.navigate('GroupScreen', { username });
             } catch (e) {
               Alert.alert('Error saving', e.message);
             }
@@ -195,9 +194,10 @@ export default function InputSchedule({ route, navigation }) {
         </TouchableOpacity>
       </View>
 
+      {/* Android: force spinner */}
       {Platform.OS === 'android' && isTimePickerVisible && (
-        <Modal transparent visible animationType="fade" onRequestClose={() => setTimePickerVisible(false)}>
-          <TouchableWithoutFeedback onPress={() => setTimePickerVisible(false)}>
+        <Modal transparent visible animationType="fade" onRequestClose={closeAll}>
+          <TouchableWithoutFeedback onPress={closeAll}>
             <View style={styles.modalOverlay}>
               <TouchableWithoutFeedback>
                 <View style={styles.modalContent}>
@@ -220,7 +220,7 @@ export default function InputSchedule({ route, navigation }) {
                           setIsStart(false);
                         } else {
                           handleIOSEnd();
-                          setTimePickerVisible(false);
+                          closeAll();
                         }
                       }}
                     >
@@ -228,7 +228,7 @@ export default function InputSchedule({ route, navigation }) {
                     </TouchableOpacity>
                     <TouchableOpacity
                       style={styles.modalButton}
-                      onPress={() => setTimePickerVisible(false)}
+                      onPress={closeAll}
                     >
                       <Text style={styles.modalButtonText}>Cancel</Text>
                     </TouchableOpacity>
@@ -240,6 +240,7 @@ export default function InputSchedule({ route, navigation }) {
         </Modal>
       )}
 
+      {/* iOS: spinner & black text */}
       {Platform.OS === 'ios' && (showIOSStart || showIOSEnd) && (
         <Modal transparent animationType="fade">
           <View style={styles.iosPickerOverlay}>
@@ -261,17 +262,19 @@ export default function InputSchedule({ route, navigation }) {
                 display="spinner"
                 onChange={handleTimeChange}
                 minuteInterval={5}
+                textColor="black"
               />
             </View>
           </View>
         </Modal>
       )}
 
+      {/* Save / Skip */}
       {!isTimePickerVisible && !showIOSStart && !showIOSEnd && (
         <View style={styles.buttonRow}>
           <TouchableOpacity
             style={styles.button}
-            onPress={() => navigation.navigate('GroupScreen', { username, userGroups: [] })}
+            onPress={() => navigation.navigate('GroupScreen', { username })}
           >
             <Text style={styles.buttonText}>Skip</Text>
           </TouchableOpacity>
@@ -288,34 +291,42 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#FFFFFF' },
   headerContainer: { paddingTop: 20, paddingBottom: 10, paddingHorizontal: 24, alignItems: 'center' },
   title: { fontSize: 25, fontWeight: 'bold', textAlign: 'center' },
+
   contentWrapper: { flex: 1, paddingHorizontal: 24 },
   dayNavigation: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 15 },
   navButton: { padding: 8, borderRadius: 8, backgroundColor: '#000000' },
   disabledButton: { backgroundColor: '#cccccc' },
   navButtonText: { color: 'white', fontWeight: '600' },
   dayHeaderText: { fontSize: 22, fontWeight: '600' },
+
   availabilityList: { flex: 1, marginBottom: 8, borderBottomColor: '#000000', borderBottomWidth: 2 },
-  timeRangeCard: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#000000', borderRadius: 10, padding: 15, marginBottom: 10, shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.2, shadowRadius: 2, elevation: 2 },
+  scrollContainer: { flexGrow: 1 },
+  timeRangeCard: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#000000', borderRadius: 10, padding: 15, marginBottom: 10 },
   timeRangeText: { fontSize: 16, flex: 1, color: '#FFFFFF' },
   removeButton: { padding: 5, borderRadius: 15, backgroundColor: '#ff6b6b', width: 30, height: 30, alignItems: 'center', justifyContent: 'center' },
   removeButtonText: { color: 'white', fontWeight: 'bold' },
   emptyState: { padding: 30, alignItems: 'center', justifyContent: 'center' },
   emptyStateText: { fontSize: 14, color: '#888', textAlign: 'center' },
+
   addButton: { backgroundColor: '#000000', borderRadius: 10, padding: 15, alignItems: 'center', marginBottom: 15, borderColor: '#000000', borderWidth: 2 },
   addButtonText: { color: 'white', fontSize: 16, fontWeight: 'bold' },
+
   buttonRow: { flexDirection: 'row', justifyContent: 'space-evenly', padding: 16, paddingHorizontal: 24 },
   button: { paddingVertical: 12, paddingLeft: 25, paddingRight: 25, borderRadius: 8, backgroundColor: '#aaaaaa', borderColor: '#000000', borderWidth: 2 },
   saveBtn: { paddingVertical: 12, paddingLeft: 70, paddingRight: 70, borderRadius: 8, backgroundColor: '#000000', borderColor: '#000000', borderWidth: 2 },
   buttonText: { color: 'white', fontSize: 16, fontWeight: 'bold' },
+
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0, 0, 0, 0.5)', justifyContent: 'center', alignItems: 'center' },
   modalContent: { width: '80%', backgroundColor: 'white', borderRadius: 10, padding: 20, alignItems: 'center' },
   modalTitle: { fontSize: 18, fontWeight: 'bold', marginBottom: 15, color: '#000000', backgroundColor: '#f0f0f0' },
   modalButtonRow: { flexDirection: 'row', justifyContent: 'space-around', width: '100%', marginTop: 15 },
   modalButton: { padding: 10, borderRadius: 5, backgroundColor: '#2289f0', minWidth: 100, alignItems: 'center' },
   modalButtonText: { color: 'white', fontWeight: 'bold' },
+
   iosPickerOverlay: { flex: 1, backgroundColor: 'rgba(0, 0, 0, 0.5)', justifyContent: 'center', alignItems: 'center', zIndex: 1000 },
   iosPickerWrapper: { width: '85%', backgroundColor: 'white', borderRadius: 12, overflow: 'hidden', shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.25, shadowRadius: 3.84, elevation: 5 },
   iosPickerHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 10, borderBottomWidth: 1, borderBottomColor: '#e0e0e0', backgroundColor: '#f8f8f8' },
   iosPickerCancelText: { color: '#ff6b6b', fontSize: 16, fontWeight: '600' },
-  iosPickerDoneText: { color: '#2289f0', fontSize: 16, fontWeight: '600' }
+  iosPickerDoneText: { color: '#2289f0', fontSize: 16, fontWeight: '600' },
+  iosPickerTitle: { fontSize: 18, fontWeight: '600', color: '#000000' }
 });

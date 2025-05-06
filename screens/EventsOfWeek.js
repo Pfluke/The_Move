@@ -1,469 +1,341 @@
-import React, { useEffect, useState } from 'react';
-import { 
-  View, Text, Alert, StyleSheet, ScrollView, TouchableOpacity, 
-  KeyboardAvoidingView, Platform, SafeAreaView, StatusBar, TouchableWithoutFeedback 
+import React, { useEffect, useState, useRef } from 'react';
+import {
+  View, Text, Alert, StyleSheet,
+  ScrollView, TouchableOpacity,
+  KeyboardAvoidingView, Platform,
+  SafeAreaView, StatusBar,
+  TouchableWithoutFeedback
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
-import { getFirestore, doc, updateDoc, onSnapshot } from 'firebase/firestore';
+import {
+  getFirestore,
+  doc,
+  updateDoc,
+  onSnapshot,
+  deleteField
+} from 'firebase/firestore';
 import { app } from '../firebaseConfig';
 
 const db = getFirestore(app);
 
-// Helper function to calculate card color based on votes
-const getCardColor = (votes) => {
-  if (!votes || votes === 0) return '#FFFFFF'; // White for no votes
-  
-  const maxVotes = 10;
-  const normalizedVote = Math.max(-1, Math.min(1, votes / maxVotes));
-  
-  if (normalizedVote > 0) {
-    const intensity = Math.min(0.8, normalizedVote * 1.2);
-    return `rgba(200, 255, 200, ${intensity})`; // Light green
+const getCardColor = votes => {
+  if (!votes) return '#FFFFFF';
+  const norm = Math.max(-1, Math.min(1, votes / 10));
+  if (norm > 0) {
+    const i = Math.min(0.8, norm * 1.2);
+    return `rgba(200,255,200,${i})`;
   } else {
-    const intensity = Math.min(0.8, Math.abs(normalizedVote) * 1.2);
-    return `rgba(255, 200, 200, ${intensity})`; // Light red
+    const i = Math.min(0.8, Math.abs(norm) * 1.2);
+    return `rgba(255,200,200,${i})`;
   }
 };
 
 const EventsOfWeek = ({ navigation, route }) => {
-  const { selectedDay, username, groupName, initialEventData } = route.params;
-  const [loadingEventData, setLoadingEventData] = useState(false);
+  const { selectedDay, username, groupName } = route.params;
   const [eventData, setEventData] = useState({});
   const [topEventKeys, setTopEventKeys] = useState([]);
-  const [showFilterModal, setShowFilterModal] = useState(false);
   const [filterDay, setFilterDay] = useState(null);
+  const [showFilterModal, setShowFilterModal] = useState(false);
 
-  const groupDocRef = doc(db, "groups", groupName);
+  const groupRef = doc(db, 'groups', groupName);
+  const scrollRef = useRef(null);
 
   useEffect(() => {
-    if (selectedDay === "WEEK") {
-      setEventData(initialEventData || {});
-      updateTopEvents(initialEventData || {});
-      return;
-    }
-
-    const unsubscribe = onSnapshot(groupDocRef, (docSnap) => {
-      if (docSnap.exists()) {
-        const slices = docSnap.data()?.slices || {};
-
-        const filtered = Object.entries(slices).filter(([, sliceData]) => {
-          const compareDay = selectedDay.toLowerCase().trim();
-          
-          if (sliceData.days && Array.isArray(sliceData.days)) {
-            return sliceData.days.map(day => day.toLowerCase().trim()).includes(compareDay);
-          } else if (sliceData.day) {
-            return sliceData.day.toLowerCase().trim() === compareDay;
-          } else {
-            return false;
-          }
-        });
-
-        const filteredData = Object.fromEntries(filtered);
-        setEventData(filteredData);
-        updateTopEvents(filteredData);
-      } else {
-        Alert.alert("Error", "Group not found");
+    const unsubscribe = onSnapshot(groupRef, snap => {
+      if (!snap.exists()) {
+        Alert.alert('Error', 'Group not found');
+        return;
       }
+
+      const raw = snap.data().slices || {};
+      // Determine which "day" to filter by:
+      //   - If modal = "All", treat as WEEK (no filter)
+      //   - Otherwise use filterDay if set, else selectedDay
+      const dayToShow =
+        filterDay === 'All'
+          ? 'WEEK'
+          : filterDay || selectedDay;
+
+      // Build entries, filtering only if dayToShow !== 'WEEK'
+      let entries = Object.entries(raw);
+      if (dayToShow !== 'WEEK') {
+        entries = entries.filter(([_, sl]) => {
+          const days = sl.days || (sl.day ? [sl.day] : []);
+          return days
+            .map(d => d.toLowerCase().trim())
+            .includes(dayToShow.toLowerCase().trim());
+        });
+      }
+
+      // Compute vote totals from voters map
+      const withVotes = Object.fromEntries(
+        entries.map(([key, sl]) => {
+          const voters = sl.voters || {};
+          const total = Object.values(voters).reduce(
+            (sum, v) => sum + (Number(v) || 0),
+            0
+          );
+          return [key, { ...sl, votes: total }];
+        })
+      );
+
+      setEventData(withVotes);
+      updateTopEvents(withVotes);
+    }, err => {
+      console.error(err);
+      Alert.alert('Error', 'Could not load events');
     });
 
     return () => unsubscribe();
-  }, [selectedDay, groupName]);
+  }, [groupName, selectedDay, filterDay]);
 
-  const updateTopEvents = (events) => {
-    let maxVotes = -Infinity;
-    let topEvents = [];
-
-    Object.entries(events).forEach(([eventKey, sliceData]) => {
-      const votes = sliceData.votes || 0;
-      if (votes > maxVotes) {
-        maxVotes = votes;
-        topEvents = [eventKey];
-      } else if (votes === maxVotes) {
-        topEvents.push(eventKey);
+  const updateTopEvents = events => {
+    let max = -Infinity, winners = [];
+    for (const [k, sl] of Object.entries(events)) {
+      if (sl.votes > max) {
+        max = sl.votes;
+        winners = [k];
+      } else if (sl.votes === max) {
+        winners.push(k);
       }
-    });
-    setTopEventKeys(topEvents);
+    }
+    setTopEventKeys(winners);
   };
 
-  const getUserVote = (eventKey) => {
-    const evt = eventData[eventKey] || {};
-    return evt.voters ? evt.voters[username] : 0;
+  const getUserVote = key => {
+    const v = eventData[key]?.voters?.[username];
+    return v === 1 || v === -1 ? v : 0;
   };
 
-  const handleVote = async (eventKey, voteValue) => {
+  const handleVote = async (key, val) => {
+    const sl = eventData[key];
+    if (!sl) return;
+    const current = getUserVote(key);
+    const next = current === val ? 0 : val;
+    const diff = next - current;
+
+    // Optimistically update UI
+    const updated = {
+      ...eventData,
+      [key]: {
+        ...sl,
+        votes: sl.votes + diff,
+        voters: {
+          ...sl.voters,
+          [username]: next !== 0 ? next : undefined
+        }
+      }
+    };
+    setEventData(updated);
+    updateTopEvents(updated);
+
+    // Persist only the voter field
+    const voterPath = `slices.${key}.voters.${username}`;
     try {
-      const eventItem = eventData[eventKey];
-      if (!eventItem) return;
-
-      const currentVote = eventItem.voters?.[username] || 0;
-      const newVote = currentVote === voteValue ? 0 : voteValue;
-      const voteDiff = newVote - currentVote;
-
-      if (newVote !== 0) {
-        const currentDays = eventItem.days ? eventItem.days.map(day => day.toLowerCase()) : [];
-        for (const [otherKey, otherEvent] of Object.entries(eventData)) {
-          if (otherKey === eventKey) continue;
-          const otherUserVote = (otherEvent.voters && otherEvent.voters[username]) || 0;
-          if (otherUserVote === newVote) {
-            const otherDays = otherEvent.days ? otherEvent.days.map(day => day.toLowerCase()) : [];
-            const intersectingDays = currentDays.filter(day => otherDays.includes(day));
-            if (intersectingDays.length > 0) {
-              const conflictDay = intersectingDays[0];
-              Alert.alert(
-                "Voting Error",
-                `You've already used your ${newVote === 1 ? "like" : "dislike"} for ${conflictDay.charAt(0).toUpperCase() + conflictDay.slice(1)}.`
-              );
-              return;
-            }
-          }
-        }
-      }
-
-      const updatedEventData = {
-        ...eventData,
-        [eventKey]: {
-          ...eventItem,
-          votes: (eventItem.votes || 0) + voteDiff,
-          voters: {
-            ...eventItem.voters,
-            [username]: newVote
-          }
-        }
-      };
-
-      const daysOfWeek = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-
-      const getSortedDays = () => {
-        const today = new Date();
-        const currentDayIndex = today.getDay();
-        const sortedDays = [
-          ...daysOfWeek.slice(currentDayIndex),
-          ...daysOfWeek.slice(0, currentDayIndex)
-        ];
-        
-        return sortedDays;
-      };
-
-      const sortedDaysOfWeek = getSortedDays();
-
-      setEventData(updatedEventData);
-      updateTopEvents(updatedEventData);
-
-      await updateDoc(groupDocRef, {
-        [`slices.${eventKey}.votes`]: (eventItem.votes || 0) + voteDiff,
-        [`slices.${eventKey}.voters.${username}`]: newVote === 0 ? null : newVote
-      }, { merge: true });
-
-    } catch (error) {
-      console.error("Voting error:", error);
-      Alert.alert("Error", "Failed to update vote. Please try again.");
-      setEventData({ ...eventData });
+      await updateDoc(groupRef, {
+        [voterPath]: next === 0 ? deleteField() : next
+      });
+    } catch (e) {
+      console.error(e);
+      Alert.alert('Error', 'Could not register vote');
     }
   };
 
-  if (loadingEventData) {
-    return (
-      <View style={styles.loadingContainer}>
-        <Text style={styles.loadingText}>Loading events...</Text>
-      </View>
-    );
-  }
+  const renderEvents = () => {
+    const keys = Object.keys(eventData);
+    if (!keys.length) {
+      return <Text style={styles.noEventsText}>NO EVENTS SCHEDULED</Text>;
+    }
+    return keys
+      .sort((a, b) => eventData[b].votes - eventData[a].votes)
+      .map(key => {
+        const sl = eventData[key];
+        const userVote = getUserVote(key);
+        const isTop = topEventKeys.includes(key);
+        return (
+          <View
+            key={key}
+            style={[
+              styles.eventCard,
+              { backgroundColor: getCardColor(sl.votes) },
+              isTop && styles.topEventBorder
+            ]}
+          >
+            <TouchableOpacity
+              style={styles.cardContent}
+              onPress={() =>
+                navigation.navigate('Event', { groupName, sliceName: key, username })
+              }
+            >
+              <View style={styles.cardHeader}>
+                <Text style={styles.eventTitle}>{key}</Text>
+                <View style={styles.voteContainer}>
+                  {isTop && (
+                    <MaterialIcons name="star" size={24} color="#FFD700" />
+                  )}
+                  <Text style={styles.voteCount}>{sl.votes}</Text>
+                </View>
+              </View>
+              <Text style={styles.eventDetails}>
+                {sl.day || 'No day'} | {sl.startTime}–{sl.endTime}
+              </Text>
+              {sl.description && (
+                <Text style={styles.eventDescription} numberOfLines={2}>
+                  {sl.description}
+                </Text>
+              )}
+            </TouchableOpacity>
+            <View style={styles.votingButtons}>
+              <TouchableOpacity
+                onPress={() => handleVote(key, 1)}
+                style={[styles.voteButton, userVote === 1 && styles.selectedVote]}
+              >
+                <MaterialIcons name="thumb-up" size={24} />
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={() => handleVote(key, -1)}
+                style={[styles.voteButton, userVote === -1 && styles.selectedVote]}
+              >
+                <MaterialIcons name="thumb-down" size={24} />
+              </TouchableOpacity>
+            </View>
+          </View>
+        );
+      });
+  };
 
   return (
-    <View style={{ flex: 1, position: 'relative' }}>
-    <SafeAreaView style={styles.safeArea}>
-      <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
-      
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity 
-          onPress={() => navigation.goBack()} 
-          style={styles.backButton}
-        >
-          <MaterialIcons name="arrow-back" size={50} color="#000000" />
-        </TouchableOpacity>
-
-        <Text style={styles.headerTitle}>
-          {filterDay ? filterDay.toUpperCase() + " EVENTS" : "WEEKLY EVENTS"}
-        </Text>
-        <TouchableOpacity
-          onPress={() => setShowFilterModal(true)}
-          style={styles.filterButton}
-        >
-          <MaterialIcons name="filter-list" size={34} color="#000000" />
-        </TouchableOpacity>
-      </View>
-
-      {/* Content */}
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={styles.container}
-      >
-        <ScrollView contentContainerStyle={styles.scrollContainer}>
-          {eventData && Object.keys(eventData).length === 0 ? (
-            <Text style={styles.noEventsText}>NO EVENTS SCHEDULED</Text>
-          ) : (
-            <View style={styles.eventsContainer}>
-              {Object.entries(eventData)
-                .filter(([, data]) => {
-                  if (!filterDay) return true;
-                  const days = data.days || [data.day];
-                  return days?.map(d => d.toLowerCase()).includes(filterDay.toLowerCase());
-                })
-                .sort(([, a], [, b]) => (b.votes || 0) - (a.votes || 0))
-                .map(([eventKey, data]) => {
-                  const userVote = getUserVote(eventKey);
-                  const isTopEvent = topEventKeys.includes(eventKey);
-                  const cardColor = getCardColor(data.votes || 0);
-
-                  return (
-                    <View 
-                      key={eventKey} 
-                      style={[
-                        styles.eventCard,
-                        { backgroundColor: cardColor },
-                        isTopEvent && styles.topEventBorder
-                      ]}
-                    >
-                      <TouchableOpacity
-                        onPress={() => navigation.navigate('Event', {
-                          groupName,
-                          sliceName: eventKey,
-                          username,
-                        })}
-                        style={styles.cardContent}
-                      >
-                        <View style={styles.cardHeader}>
-                          <Text style={styles.eventTitle}>{eventKey}</Text>
-                          <View style={styles.voteContainer}>
-                            {isTopEvent && (
-                              <MaterialIcons 
-                                name="star" 
-                                size={24} 
-                                color="#FFD700" 
-                                style={styles.starIcon} 
-                              />
-                            )}
-                            <Text style={styles.voteCount}>{data.votes || 0}</Text>
-                          </View>
-                        </View>
-                        
-                        <Text style={styles.eventDetails}>
-                          {data.day  || "No day assigned"} | {data.startTime} - {data.endTime}
-                        </Text>
-
-                        {data.description && (
-                          <Text style={styles.eventDescription} numberOfLines={2}>
-                            {data.description}
-                          </Text>
-                        )}
-                      </TouchableOpacity>
-
-                      <View style={styles.votingButtons}>
-                        <TouchableOpacity 
-                          onPress={() => handleVote(eventKey, 1)}
-                          style={[
-                            styles.voteButton,
-                            userVote === 1 && styles.selectedVote
-                          ]}
-                        >
-                          <MaterialIcons name="thumb-up" size={24} color="#000000" />
-                        </TouchableOpacity>
-
-                        <TouchableOpacity 
-                          onPress={() => handleVote(eventKey, -1)}
-                          style={[
-                            styles.voteButton,
-                            userVote === -1 && styles.selectedVote
-                          ]}
-                        >
-                          <MaterialIcons name="thumb-down" size={24} color="#000000" />
-                        </TouchableOpacity>
-                      </View>
-                    </View>
-                  );
-                })}
-            </View>
-          )}
-        </ScrollView>
-      </KeyboardAvoidingView>
-    </SafeAreaView>
-    {showFilterModal && (
-      <TouchableWithoutFeedback onPress={() => setShowFilterModal(false)}>
-        <View style={styles.overlay}>
-          <View style={styles.filterModalContent}>
-            {["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday", null].map(day => (
-              <TouchableOpacity
-                key={day || "All"}
-                onPress={() => {
-                  setFilterDay(day);
-                  setShowFilterModal(false);
-                }}
-                style={styles.modalItem}
-              >
-                <Text style={styles.modalItemText}>{day || "All Days"}</Text>
-              </TouchableOpacity>
-            ))}
-          </View>
+    <View style={{ flex: 1 }}>
+      <SafeAreaView style={styles.safeArea}>
+        <StatusBar barStyle="dark-content" backgroundColor="#fff" />
+        <View style={styles.header}>
+          <TouchableOpacity onPress={() => navigation.goBack()}>
+            <MaterialIcons name="arrow-back" size={32} />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>
+            {(filterDay || selectedDay).toUpperCase()} EVENTS
+          </Text>
+          <TouchableOpacity onPress={() => setShowFilterModal(true)}>
+            <MaterialIcons name="filter-list" size={28} />
+          </TouchableOpacity>
         </View>
-      </TouchableWithoutFeedback>
+
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          style={styles.container}
+        >
+          <ScrollView
+            ref={scrollRef}
+            contentContainerStyle={styles.scrollContainer}
+          >
+            {renderEvents()}
+          </ScrollView>
+        </KeyboardAvoidingView>
+      </SafeAreaView>
+
+      {showFilterModal && (
+        <TouchableWithoutFeedback onPress={() => setShowFilterModal(false)}>
+          <View style={styles.overlay}>
+            <View style={styles.filterModalContent}>
+              {[
+                'All',
+                'Monday',
+                'Tuesday',
+                'Wednesday',
+                'Thursday',
+                'Friday',
+                'Saturday',
+                'Sunday'
+              ].map(day => (
+                <TouchableOpacity
+                  key={day}
+                  onPress={() => {
+                    setFilterDay(day);
+                    setShowFilterModal(false);
+                  }}
+                  style={styles.modalItem}
+                >
+                  <Text style={styles.modalItemText}>{day}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+        </TouchableWithoutFeedback>
       )}
-  </View>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
-  safeArea: { 
-    flex: 1, 
-    backgroundColor: '#FFFFFF' 
-  },
-  loadingContainer: { 
-    flex: 1, 
-    justifyContent: 'center', 
-    alignItems: 'center', 
-    backgroundColor: '#FFFFFF' 
-  },
-  loadingText: { 
-    fontSize: 18, 
-    color: '#888' 
-  },
-  container: { 
-    flex: 1, 
-    backgroundColor: '#FFFFFF' 
-  },
-  header: { 
-    flexDirection: 'row', 
-    alignItems: 'center', 
-    paddingVertical: 10, 
-    borderBottomWidth: 2, 
-    borderBottomColor: '#E0E0E0',
-  },
-  backButton: { 
-    width: 40,
-    marginLeft: 10,
-  },
-  filterButton: { 
-    marginRight: 14,
-  },
-  headerTitle: { 
-    fontSize: 28, 
-    fontWeight: 'bold', 
-    color: '#000000', 
-    textTransform: 'uppercase', 
-    flex: 1, 
-    textAlign: 'center',
-    paddingLeft: 10,
-    paddingRight: 10,
-  },
-  scrollContainer: { 
-    flexGrow: 1, 
-    padding: 15 
-  },
-  noEventsText: { 
-    fontSize: 16, 
-    color: '#888', 
-    textAlign: 'center', 
-    marginTop: 32 
-  },
-  eventsContainer: { 
-    width: '100%' 
-  },
-  eventCard: { 
-    borderRadius: 8, 
-    padding: 16, 
-    marginBottom: 16, 
-    borderWidth: 1, 
-    borderColor: '#E0E0E0',
-    shadowColor: '#000', 
-    shadowOffset: { width: 0, height: 2 }, 
-    shadowOpacity: 0.1, 
-    shadowRadius: 4, 
-    elevation: 2 
-  },
-  topEventBorder: { 
-    borderColor: '#4CAF50', 
-    borderWidth: 2 
-  },
-  cardContent: { 
-    flex: 1 
-  },
-  cardHeader: { 
-    flexDirection: 'row', 
-    justifyContent: 'space-between', 
-    marginBottom: 8 
-  },
-  eventTitle: { 
-    fontSize: 21, 
-    fontWeight: 'bold', 
-    color: '#000000', 
-    flex: 1 
-  },
-  voteContainer: { 
-    flexDirection: 'row', 
-    alignItems: 'center' 
-  },
-  starIcon: { 
-    marginRight: 8 
-  },
-  voteCount: { 
-    fontSize: 20, 
-    fontWeight: 'bold', 
-    color: '#000000' 
-  },
-  eventDetails: { 
-    fontSize: 14, 
-    color: '#666666', 
-    marginBottom: 8 
-  },
-  eventDescription: { 
-    fontSize: 14, 
-    color: '#888888', 
-    marginBottom: 12 
-  },
-  votingButtons: { 
-    flexDirection: 'row', 
-    justifyContent: 'center', 
-    marginTop: 8 
-  },
-  voteButton: { 
-    padding: 8, 
-    marginHorizontal: 16, 
-    borderRadius: 8 
-  },
-  selectedVote: { 
-    backgroundColor: 'rgba(0, 122, 255, 0.1)', 
-    borderWidth: 1, 
-    borderColor: '#007AFF' 
-  },
-  overlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    justifyContent: 'center',
+  safeArea: { flex: 1, backgroundColor: '#fff' },
+  container: { flex: 1, backgroundColor: '#fff' },
+  header: {
+    flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: 10,
+    borderBottomWidth: 1,
+    borderColor: '#eee'
+  },
+  headerTitle: { fontSize: 20, fontWeight: 'bold' },
+  scrollContainer: { padding: 15 },
+  noEventsText: { textAlign: 'center', marginTop: 32, color: '#888' },
+
+  eventCard: {
+    marginBottom: 16,
+    borderRadius: 8,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: '#ddd',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2
+  },
+  topEventBorder: { borderColor: '#4CAF50', borderWidth: 2 },
+
+  cardContent: { flex: 1 },
+  cardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 8
+  },
+  eventTitle: { fontSize: 18, fontWeight: 'bold', flex: 1 },
+  voteContainer: { flexDirection: 'row', alignItems: 'center' },
+  voteCount: { marginLeft: 4, fontSize: 16, fontWeight: 'bold' },
+  eventDetails: { color: '#666', marginBottom: 8 },
+  eventDescription: { color: '#888', marginBottom: 12 },
+
+  votingButtons: { flexDirection: 'row', justifyContent: 'center' },
+  voteButton: { padding: 8, marginHorizontal: 16, borderRadius: 8 },
+  selectedVote: {
+    backgroundColor: 'rgba(0,122,255,0.1)',
+    borderWidth: 1,
+    borderColor: '#007AFF'
+  },
+
+  overlay: {
+    ...StyleSheet.absoluteFillObject,
     backgroundColor: 'rgba(0,0,0,0.6)',
-    zIndex: 10,
+    justifyContent: 'center',
+    alignItems: 'center'
   },
   filterModalContent: {
-    backgroundColor: 'white',
+    backgroundColor: '#fff',
     borderRadius: 20,
-    padding: 24,
+    padding: 20,
     width: '80%',
     alignItems: 'center'
   },
   modalItem: {
-    paddingVertical: 14,
+    paddingVertical: 12,
     width: '100%',
     alignItems: 'center',
-    borderBottomColor: '#ccc',
     borderBottomWidth: 1,
+    borderColor: '#ccc'
   },
-  modalItemText: {
-    fontSize: 20,
-    fontWeight: 'bold',
-  },
+  modalItemText: { fontSize: 18, fontWeight: 'bold' }
 });
 
 export default EventsOfWeek;

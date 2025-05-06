@@ -65,10 +65,10 @@ const CreateAccountScreen = ({ navigation }) => {
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
           style={styles.container}
         >
-          <View style={styles.header}>
+          {/* <View style={styles.header}>
             <Text style={styles.headerTitle}>THE MOVE</Text>
             <View style={styles.headerUnderline} />
-          </View>
+          </View> */}
 
           <View style={styles.contentContainer}>
             <Text style={styles.sectionTitle}>CREATE ACCOUNT</Text>

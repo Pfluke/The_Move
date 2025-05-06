@@ -337,6 +337,6 @@ const styles = StyleSheet.create({
   cancelText:{ fontWeight:'bold',fontSize:20 },
   nextButton:{ padding:10,backgroundColor:'#d4f7d4',borderRadius:3,borderWidth:2,width:'40%',alignItems:'center', marginHorizontal: 10 },
   nextText:{ fontWeight:'bold',fontSize:20 },
-  reviewScrollContainer:{ paddingBottom:30 },
+  reviewScrollContainer:{ paddingBottom:0 },
 });
 

@@ -1,13 +1,14 @@
 import React, { useState, useRef } from 'react';
 import {
   View, TextInput, Text, StyleSheet, TouchableOpacity,
-  Alert, Keyboard, KeyboardAvoidingView, Platform, TouchableWithoutFeedback, SafeAreaView, StatusBar
+  Alert, Keyboard, KeyboardAvoidingView, Platform, TouchableWithoutFeedback, SafeAreaView, StatusBar, Image
 } from 'react-native';
 import {
   getFirestore, doc, getDoc, setDoc,
   collection, query, where, getDocs
 } from 'firebase/firestore';
 import { app } from '../firebaseConfig';
+import ArrowsIcon from '../assets/arrowsiconupdated.png';
 
 const db = getFirestore(app);
 
@@ -74,8 +75,11 @@ const LoginScreen = ({ navigation }) => {
           style={styles.container}
         >
           <View style={styles.header}>
-            <Text style={styles.headerTitle}>THE MOVE</Text>
-            <View style={styles.headerUnderline} />
+            <Image
+                source={ArrowsIcon}
+                style={styles.logoImage}
+                resizeMode="contain"
+              />
           </View>
 
           <View style={styles.contentContainer}>
@@ -135,24 +139,24 @@ const styles = StyleSheet.create({
   },
   header: {
     paddingTop: Platform.OS === 'ios' ? 0 : 20,
-    paddingBottom: 20,
-    paddingTop: 15,
+    paddingBottom: 0,
+    paddingTop: 0,
     alignItems: 'center',
     width: '100%',
   },
-  headerTitle: {
-    fontSize: 50,
-    fontWeight: '800',
-    color: '#000000',
-    textTransform: 'uppercase',
-  },
-  headerUnderline: {
-    height: 4,
-    width: '40%',
-    backgroundColor: 'black',
-    marginTop: 8,
-    borderRadius: 2,
-  },
+  // headerTitle: {
+  //   fontSize: 50,
+  //   fontWeight: '800',
+  //   color: '#000000',
+  //   textTransform: 'uppercase',
+  // },
+  // headerUnderline: {
+  //   height: 4,
+  //   width: '40%',
+  //   backgroundColor: 'black',
+  //   marginTop: 8,
+  //   borderRadius: 2,
+  // },
   contentContainer: {
     flex: 1,
     width: '100%',
@@ -213,6 +217,7 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     textAlign: 'center',
   },
+  logoImage: { width: 300, height: 160, marginTop: 20},
 });
 
 export default LoginScreen;

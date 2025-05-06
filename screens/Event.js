@@ -115,16 +115,16 @@ const Event = ({ route, navigation }) => {
           {/* <Text style={styles.sectionTitle}>Location</Text> */}
           {/* <Text style={styles.cardContent}>{eventData.location}</Text> */}
 
-          <Text style={styles.sectionTitle}>Votes</Text>
+          <Text style={styles.sectionTitle}>Likes</Text>
           <Text style={styles.cardContent}>{eventData.votes}</Text>
         </View>
 
-        <TouchableOpacity
+        {/* <TouchableOpacity
           style={styles.button}
-          onPress={() => navigation.navigate('EventScreen', { username, groupName })}
+          onPress={() => navigation.goBack())}
         >
           <Text style={styles.buttonText}>Back to Group</Text>
-        </TouchableOpacity>
+        </TouchableOpacity> */}
       </ScrollView>
     </SafeAreaView>
   );

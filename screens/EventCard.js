@@ -282,7 +282,7 @@ const styles = StyleSheet.create({
     height: '100%',
   },
   eventTitle: {
-    fontSize: 56,
+    fontSize: 48,
     fontWeight: 'bold',
     color: '#000',
     textAlign: 'center',
